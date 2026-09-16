@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INSPECTOR
+  DEAN
+  SUPER_ADMIN
+}
+enum TransactionStatus {
+  DRAFT
+  PENDING_DEAN
+  APPROVED_BY_DEAN
+  APPROVED
+  REJECTED
+}
+enum ApprovalStage {
+  DEAN
+  SUPER_ADMIN
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role Role
+  active Boolean @default(true)
+  projects Project[] @relation("OwnerProjects")
+  auditEntries AuditEntry[]
+  sessions Session[]
+  createdAt DateTime @default(now())
+}
+model Project {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  description String
+  startDate DateTime
+  endDate DateTime
+  totalBudget Decimal @db.Decimal(14,2)
+  ownerId String
+  owner User @relation("OwnerProjects", fields: [ownerId], references: [id])
+  categories BudgetCategory[]
+  funders ProjectFunder[]
+  coInspectors CoInspector[]
+  transactions Transaction[]
+  createdAt DateTime @default(now())
+}
+model FundingOrganization {
+  id String @id @default(cuid())
+  name String @unique
+  projects ProjectFunder[]
+}
+model ProjectFunder {
+  projectId String
+  organizationId String
+  contributed Decimal @db.Decimal(14,2)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization FundingOrganization @relation(fields: [organizationId], references: [id])
+  @@id([projectId, organizationId])
+}
+model CoInspector {
+  id String @id @default(cuid())
+  name String
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+model BudgetCategory {
+  id String @id @default(cuid())
+  name String
+  allocated Decimal @db.Decimal(14,2)
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lines TransactionLine[]
+}
+model Transaction {
+  id String @id @default(cuid())
+  code String @unique
+  date DateTime
+  vendor String
+  description String
+  status TransactionStatus @default(DRAFT)
+  projectId String
+  project Project @relation(fields: [projectId], references: [id])
+  createdById String
+  lines TransactionLine[]
+  invoice Invoice?
+  approvals Approval[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model TransactionLine {
+  id String @id @default(cuid())
+  amount Decimal @db.Decimal(14,2)
+  transactionId String
+  categoryId String
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  category BudgetCategory @relation(fields: [categoryId], references: [id])
+}
+model Invoice {
+  id String @id @default(cuid())
+  fileName String
+  mimeType String
+  size Int
+  storageKey String
+  transactionId String @unique
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
+}
+model Approval {
+  id String @id @default(cuid())
+  stage ApprovalStage
+  decision String
+  remarks String?
+  transactionId String
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  reviewerId String
+  createdAt DateTime @default(now())
+}
+model AuditEntry {
+  id String @id @default(cuid())
+  action String
+  entity String
+  entityId String
+  before Json?
+  after Json?
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  createdAt DateTime @default(now())
+}
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+model OtpChallenge {
+  id String @id @default(cuid())
+  email String
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+}
