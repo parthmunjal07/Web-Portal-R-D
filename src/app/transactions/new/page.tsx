@@ -2,9 +2,11 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, UploadCloud } from "lucide-react";
+import { parseRole } from "@/lib/permissions";
 
 export default function NewTransaction() {
   const router = useRouter();
+  const role = parseRole(typeof window === "undefined" ? undefined : new URLSearchParams(window.location.search).get("role") || undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ projectId: "demo-project", date: "", vendor: "", description: "", categoryId: "equipment", amount: "" });
   const [invoice, setInvoice] = useState<{ path: string; name: string } | null>(null);
@@ -14,7 +16,7 @@ export default function NewTransaction() {
   async function upload(file: File) {
     setUploading(true); setMessage(null);
     const body = new FormData(); body.append("file", file);
-    const response = await fetch("/api/uploads", { method: "POST", body });
+    const response = await fetch("/api/uploads", { method: "POST", headers: { "x-demo-role": role }, body });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) setMessage({ text: result.error || "Upload failed.", error: true });
     else setInvoice({ path: result.pathname, name: file.name });
@@ -22,7 +24,7 @@ export default function NewTransaction() {
   }
   async function submit() {
     if (!form.date || !form.vendor || !form.description || !form.amount || !invoice) { setMessage({ text: "Complete the form and attach an invoice before submitting.", error: true }); return; }
-    const response = await fetch("/api/transactions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, amount: Number(form.amount), invoicePath: invoice.path, invoiceName: invoice.name }) });
+    const response = await fetch("/api/transactions", { method: "POST", headers: { "Content-Type": "application/json", "x-demo-role": role }, body: JSON.stringify({ ...form, amount: Number(form.amount), invoicePath: invoice.path, invoiceName: invoice.name }) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) setMessage({ text: result.error || "Could not submit transaction.", error: true });
     else setMessage({ text: `Transaction ${result.code} submitted for Dean review.` });

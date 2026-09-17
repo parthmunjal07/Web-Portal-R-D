@@ -12,10 +12,10 @@ const transactionSchema = z.object({
 export async function POST(request: Request) {
   const parsed = transactionSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Complete every transaction field and attach an invoice." }, { status: 400 });
-  if (process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL) return NextResponse.json({ ok: true, code: `TXN-${Math.floor(1000 + Math.random() * 9000)}`, demo: true }, { status: 201 });
-  const user = await currentUser();
+  const user = process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL ? { role: "INSPECTOR", id: "demo-user" } : await currentUser();
   requireRole(user, ["INSPECTOR"]);
   const { projectId, date, vendor, description, categoryId, amount, invoicePath, invoiceName } = parsed.data;
+  if (process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL) return NextResponse.json({ ok: true, code: `TXN-${Math.floor(1000 + Math.random() * 9000)}`, demo: true }, { status: 201 });
   const category = await db.budgetCategory.findFirst({ where: { id: categoryId, project: { ownerId: user!.id } } });
   if (!category) return NextResponse.json({ error: "Category not found for your project." }, { status: 404 });
   const approved = await db.transactionLine.aggregate({ _sum: { amount: true }, where: { categoryId, transaction: { status: { in: ["APPROVED", "APPROVED_BY_DEAN"] } } } });
