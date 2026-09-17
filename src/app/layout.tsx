@@ -1,3 +1,3 @@
 import "./globals.css";
-import { Sidebar, Topbar } from "./ui";
-export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en"><body><div className="shell"><Sidebar/><div className="main"><Topbar/>{children}</div></div></body></html> }
+import { AppShell } from "./shell";
+export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en"><body><AppShell>{children}</AppShell></body></html> }
