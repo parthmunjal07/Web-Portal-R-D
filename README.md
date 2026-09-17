@@ -14,7 +14,7 @@ Demo credentials use `Demo@12345`: `inspector@demo.edu`, `dean@demo.edu`, and `a
 
 ## Production services
 
-Set `DATABASE_URL` to Neon PostgreSQL, configure Resend or institutional SMTP for OTP/notifications, and configure Cloudflare R2 for invoice files. `DEMO_MODE` should be disabled in production.
+Set `DATABASE_URL` to Neon PostgreSQL, configure Resend or institutional SMTP for OTP/notifications, and add a Vercel Blob `BLOB_READ_WRITE_TOKEN` for invoice files. `DEMO_MODE` should be disabled in production.
 
 ## Verification
 
