@@ -16,11 +16,11 @@ const navigation = [
 export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
-  useEffect(() => setRole(new URLSearchParams(window.location.search).get("role")), []);
+  useEffect(() => { const queryRole = new URLSearchParams(window.location.search).get("role"); const savedRole = sessionStorage.getItem("rd_demo_role"); setRole(queryRole || savedRole); }, []);
   const isApprover = role === "DEAN" || role === "SUPER_ADMIN";
   return <><button className={`sidebar-scrim ${open ? "visible" : ""}`} aria-label="Close navigation" onClick={onClose} /><aside className={`sidebar ${open ? "open" : ""}`}>
     <div className="brand"><div className="brand-mark">R</div><small>R&amp;D Fund Portal</small></div>
-    <nav className="nav" aria-label="Primary navigation">{navigation.filter(([label]) => label !== "Approvals" || isApprover).map(([label, href, Icon]) => <Link className={pathname.startsWith(href) ? "active" : ""} href={role ? `${href}?role=${role}` : href} key={href}><Icon className="nav-icon" size={19} strokeWidth={1.8} /><span>{label}</span></Link>)}{role === "SUPER_ADMIN" && <><Link className={pathname.startsWith("/admin/users") ? "active" : ""} href="/admin/users?role=SUPER_ADMIN"><UserRound className="nav-icon" size={19}/><span>User accounts</span></Link><Link className={pathname.startsWith("/admin/audit") ? "active" : ""} href="/admin/audit?role=SUPER_ADMIN"><ShieldCheck className="nav-icon" size={19}/><span>Audit log</span></Link></>}</nav>
+    <nav className="nav" aria-label="Primary navigation">{navigation.map(([label, href, Icon]) => <Link className={pathname.startsWith(href) ? "active" : ""} href={role ? `${href}?role=${role}` : href} key={href}><Icon className="nav-icon" size={19} strokeWidth={1.8} /><span>{label}</span></Link>)}{role === "SUPER_ADMIN" && <><Link className={pathname.startsWith("/admin/users") ? "active" : ""} href="/admin/users?role=SUPER_ADMIN"><UserRound className="nav-icon" size={19}/><span>User accounts</span></Link><Link className={pathname.startsWith("/admin/audit") ? "active" : ""} href="/admin/audit?role=SUPER_ADMIN"><ShieldCheck className="nav-icon" size={19}/><span>Audit log</span></Link></>}</nav>
     <div className="sidebar-footer"><Link href="/profile"><UserRound size={17} /><span>Profile</span></Link><Link href="/login"><LogOut size={17} /><span>Logout</span></Link></div>
   </aside></>;
 }
