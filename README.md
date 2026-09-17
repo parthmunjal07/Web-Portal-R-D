@@ -12,6 +12,8 @@ Next.js App Router portal for academic R&D project budgets, invoice-backed trans
 
 Demo credentials use `Demo@12345`: `inspector@demo.edu`, `dean@demo.edu`, and `admin@demo.edu`.
 
+The login screen includes role cards for each demo account. After verification, the Inspector dashboard focuses on owned projects and new transactions, the Dean dashboard focuses on the approval queue, and the Super Admin dashboard exposes final approvals plus `/admin/users` and `/admin/audit`.
+
 ## Production services
 
 Set `DATABASE_URL` to Neon PostgreSQL, configure Resend or institutional SMTP for OTP/notifications, and add a Vercel Blob `BLOB_READ_WRITE_TOKEN` for invoice files. `DEMO_MODE` should be disabled in production.

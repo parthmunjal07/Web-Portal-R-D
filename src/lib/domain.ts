@@ -2,6 +2,11 @@ export type Role = "INSPECTOR" | "DEAN" | "SUPER_ADMIN";
 export type TransactionStatus = "DRAFT" | "PENDING_DEAN" | "APPROVED_BY_DEAN" | "APPROVED" | "REJECTED";
 export type Project = { id: string; code: string; name: string; funder: string; duration: string; budget: number; spent: number; status: string };
 export type Transaction = { id: string; date: string; vendor: string; purpose: string; project: string; amount: number; status: TransactionStatus };
+export const demoAccounts = [
+  { role: "INSPECTOR" as Role, name: "Dr. Arvind Kumar", email: "inspector@demo.edu", title: "Project Inspector", focus: "Manage your projects and submit invoice-backed spend" },
+  { role: "DEAN" as Role, name: "Prof. Meena Sharma", email: "dean@demo.edu", title: "Dean of Research & Development", focus: "Review every transaction awaiting Dean approval" },
+  { role: "SUPER_ADMIN" as Role, name: "Ravi Menon", email: "admin@demo.edu", title: "Super Admin", focus: "Complete final approvals, users, and audit oversight" },
+];
 export const demoProjects: Project[] = [
   { id: "1", code: "PRJ-2023-014", name: "AI in Healthcare Diagnostics", funder: "DST-SERB", duration: "2022-2025", budget: 1500000, spent: 675000, status: "Active" },
   { id: "2", code: "PRJ-2023-089", name: "Quantum Computing Alg.", funder: "MeitY", duration: "2023-2026", budget: 1200000, spent: 180000, status: "Just Started" },
