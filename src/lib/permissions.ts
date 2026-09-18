@@ -2,10 +2,18 @@ import type { Role } from "./domain";
 export type { Role } from "./domain";
 
 export type Capability =
-  | "createProject" | "setBudget" | "addFundingOrganization"
-  | "addCoInspectors" | "editEndDate" | "submitTransaction"
-  | "editDraftTransaction" | "viewAllProjects" | "viewAllTransactions"
-  | "approveTransaction" | "viewAllAudit" | "manageUsers";
+  | "createProject"
+  | "setBudget"
+  | "addFundingOrganization"
+  | "addCoInspectors"
+  | "editEndDate"
+  | "submitTransaction"
+  | "editDraftTransaction"
+  | "viewAllProjects"
+  | "viewAllTransactions"
+  | "approveTransaction"
+  | "viewAllAudit"
+  | "manageUsers";
 
 const matrix: Record<Capability, Role[]> = {
   createProject: ["INSPECTOR", "DEAN", "SUPER_ADMIN"],
@@ -22,5 +30,9 @@ const matrix: Record<Capability, Role[]> = {
   manageUsers: ["SUPER_ADMIN"],
 };
 
-export function can(role: Role, capability: Capability) { return matrix[capability].includes(role); }
-export function parseRole(value?: string): Role { return value === "DEAN" || value === "SUPER_ADMIN" ? value : "INSPECTOR"; }
+export function can(role: Role, capability: Capability) {
+  return matrix[capability].includes(role);
+}
+export function parseRole(value?: string): Role {
+  return value === "DEAN" || value === "SUPER_ADMIN" ? value : "INSPECTOR";
+}

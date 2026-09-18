@@ -1,3 +1,58 @@
 import { History, ShieldCheck } from "lucide-react";
-const events=[['Project created','RND-2026-014','Dr. Arvind Kumar','17 Sep 2026, 10:02 AM'],['Transaction submitted','TXN-1842','Dr. Arvind Kumar','17 Sep 2026, 10:45 AM'],['Dean review pending','TXN-1842','Prof. Meena Sharma','17 Sep 2026, 11:12 AM']];
-export default function Audit(){return <main className="content"><div className="page-header"><div><h1 className="title">Audit log</h1><div className="eyebrow">Permanent record of administrative and approval activity</div></div><ShieldCheck size={30} color="#059669"/></div><div className="panel"><div className="section-heading"><h2>Recent activity</h2><History size={20} color="#66717a"/></div><div className="audit-list">{events.map(([action,entity,actor,date])=><div className="audit-row" key={action}><div className="audit-icon"><History size={16}/></div><div><strong>{action}</strong><span className="sub">{entity} · by {actor}</span></div><time>{date}</time></div>)}</div></div></main>}
+const events = [
+  [
+    "Project created",
+    "RND-2026-014",
+    "Dr. Arvind Kumar",
+    "17 Sep 2026, 10:02 AM",
+  ],
+  [
+    "Transaction submitted",
+    "TXN-1842",
+    "Dr. Arvind Kumar",
+    "17 Sep 2026, 10:45 AM",
+  ],
+  [
+    "Dean review pending",
+    "TXN-1842",
+    "Prof. Meena Sharma",
+    "17 Sep 2026, 11:12 AM",
+  ],
+];
+export default function Audit() {
+  return (
+    <main className="content">
+      <div className="page-header">
+        <div>
+          <h1 className="title">Audit log</h1>
+          <div className="eyebrow">
+            Permanent record of administrative and approval activity
+          </div>
+        </div>
+        <ShieldCheck size={30} color="#059669" />
+      </div>
+      <div className="panel">
+        <div className="section-heading">
+          <h2>Recent activity</h2>
+          <History size={20} color="#66717a" />
+        </div>
+        <div className="audit-list">
+          {events.map(([action, entity, actor, date]) => (
+            <div className="audit-row" key={action}>
+              <div className="audit-icon">
+                <History size={16} />
+              </div>
+              <div>
+                <strong>{action}</strong>
+                <span className="sub">
+                  {entity} · by {actor}
+                </span>
+              </div>
+              <time>{date}</time>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
