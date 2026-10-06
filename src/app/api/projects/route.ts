@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { currentUser, requireRole } from "@/lib/auth";
+import { currentUser, hasRole } from "@/lib/auth";
 import { can, parseRole } from "@/lib/permissions";
+import { cookies } from "next/headers";
 
 const schema = z.object({
   name: z.string().min(3),
@@ -29,15 +30,17 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const user =
-    process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL
+    process.env.DEMO_MODE === "true"
       ? {
-          role: parseRole(request.headers.get("x-demo-role") || undefined),
+          role: parseRole((await cookies()).get("rd_demo_role")?.value),
           id: "demo-user",
         }
       : await currentUser();
-  requireRole(user, ["INSPECTOR", "DEAN", "SUPER_ADMIN"]);
+  if (!hasRole(user, ["INSPECTOR", "DEAN", "SUPER_ADMIN"])) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
+  }
   const role =
-    user?.role || parseRole(request.headers.get("x-demo-role") || undefined);
+    user?.role || parseRole((await cookies()).get("rd_demo_role")?.value);
   if (!can(role, "createProject"))
     return NextResponse.json(
       { error: "You cannot create projects." },
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
       { error: "Only Project Inspectors can add funding organizations." },
       { status: 403 },
     );
-  if (process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL)
+  if (process.env.DEMO_MODE === "true")
     return NextResponse.json(
       {
         ok: true,
@@ -113,7 +116,7 @@ export async function POST(request: Request) {
         create: (coInspectors || "")
           .split(",")
           .map((item) => item.trim())
-          .filter(Boolean)
+          .filter((p) => !!p)
           .map((name) => ({ name })),
       },
     },

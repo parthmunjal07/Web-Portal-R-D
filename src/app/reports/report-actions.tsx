@@ -1,51 +1,89 @@
 "use client";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
-import { demoTransactions, money } from "@/lib/domain";
+import { useState } from "react";
+import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import type { TxCsvRow } from "@/app/api/reports/transactions/route";
 
+// ── CSV helpers ───────────────────────────────────────────────────────────────
+const HEADERS: (keyof TxCsvRow)[] = [
+  "id",
+  "date",
+  "vendor",
+  "purpose",
+  "project",
+  "category",
+  "amount",
+  "status",
+];
+
+const HEADER_LABELS: Record<keyof TxCsvRow, string> = {
+  id: "Transaction ID",
+  date: "Date",
+  vendor: "Vendor",
+  purpose: "Purpose",
+  project: "Project",
+  category: "Category",
+  amount: "Amount",
+  status: "Status",
+};
+
+function toCsv(rows: TxCsvRow[]): string {
+  const escape = (v: string) => `"${String(v).replaceAll('"', '""')}"`;
+  const header = HEADERS.map((k) => escape(HEADER_LABELS[k])).join(",");
+  const body = rows
+    .map((r) => HEADERS.map((k) => escape(r[k])).join(","))
+    .join("\n");
+  return `${header}\n${body}`;
+}
+
+function downloadBlob(content: string, filename: string) {
+  const url = URL.createObjectURL(
+    new Blob([content], { type: "text/csv;charset=utf-8" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export function ExportActions() {
-  function exportCsv() {
-    const rows = [
-      [
-        "Transaction ID",
-        "Date",
-        "Vendor",
-        "Purpose",
-        "Project",
-        "Amount",
-        "Status",
-      ],
-      ...demoTransactions.map((t) => [
-        t.id,
-        t.date,
-        t.vendor,
-        t.purpose,
-        t.project,
-        money(t.amount),
-        t.status,
-      ]),
-    ];
-    const csv = rows
-      .map((row) =>
-        row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","),
-      )
-      .join("\n");
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "rd-transaction-history.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function exportCsv() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/reports/transactions");
+      if (!res.ok) throw new Error("Failed to fetch transaction data.");
+      const rows: TxCsvRow[] = await res.json();
+      downloadBlob(toCsv(rows), "rd-transaction-history.csv");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed.");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
-    <div className="report-actions">
-      <button className="primary" onClick={exportCsv}>
-        <FileSpreadsheet size={16} /> Export Excel-compatible CSV
-      </button>
-      <button className="secondary" onClick={() => window.print()}>
-        <FileText size={16} /> Print / save PDF
-      </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {error && (
+        <span style={{ fontSize: 12, color: "#b71329" }}>{error}</span>
+      )}
+      <div className="report-actions">
+        <button className="primary" onClick={exportCsv} disabled={loading}>
+          {loading ? (
+            <Loader2 size={16} className="spin" />
+          ) : (
+            <FileSpreadsheet size={16} />
+          )}{" "}
+          {loading ? "Exporting…" : "Export Excel-compatible CSV"}
+        </button>
+        <button className="secondary" onClick={() => window.print()}>
+          <FileText size={16} /> Print / save PDF
+        </button>
+      </div>
     </div>
   );
 }

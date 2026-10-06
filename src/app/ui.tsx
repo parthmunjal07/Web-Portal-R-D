@@ -99,7 +99,20 @@ export function Sidebar({
   );
 }
 
-export function Topbar({ onMenu }: { onMenu?: () => void }) {
+export function Topbar({
+  onMenu,
+  user,
+}: {
+  onMenu?: () => void;
+  user?: { name: string } | null;
+}) {
+  const initials =
+    user?.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "Guest";
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -115,15 +128,27 @@ export function Topbar({ onMenu }: { onMenu?: () => void }) {
         </div>
       </div>
       <div className="top-actions">
-        <button className="icon-button" aria-label="Notifications">
+        <button
+          className="icon-button"
+          aria-label="Notifications"
+          title="Notifications (Not implemented)"
+        >
           <Bell size={18} />
           <i className="notification-dot" />
         </button>
-        <button className="icon-button" aria-label="Help">
+        <button
+          className="icon-button"
+          aria-label="Help"
+          title="Help Center (Not implemented)"
+        >
           <CircleHelp size={18} />
         </button>
-        <div className="avatar" aria-label="Signed in as Dr. Sharma">
-          AS
+        <div
+          className="avatar"
+          aria-label={user ? `Signed in as ${user.name}` : "Not signed in"}
+          title={user ? user.name : "Guest"}
+        >
+          {initials.substring(0, 2)}
         </div>
       </div>
     </header>

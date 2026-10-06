@@ -30,6 +30,6 @@ export async function currentUser() {
     if (await bcrypt.compare(raw, s.tokenHash)) return s.user;
   return null;
 }
-export function requireRole(user: { role: string } | null, roles: string[]) {
-  if (!user || !roles.includes(user.role)) throw new Error("Unauthorized");
+export function hasRole(user: { role: string } | null, roles: string[]) {
+  return !!user && roles.includes(user.role);
 }

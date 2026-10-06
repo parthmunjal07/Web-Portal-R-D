@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { currentUser, requireRole } from "@/lib/auth";
+import { TransactionStatus as PrismaStatus } from "@prisma/client";
+import { currentUser, hasRole } from "@/lib/auth";
 
 const transactionSchema = z.object({
   projectId: z.string().min(1),
@@ -22,10 +23,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const user =
-    process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL
+    process.env.DEMO_MODE === "true"
       ? { role: "INSPECTOR", id: "demo-user" }
       : await currentUser();
-  requireRole(user, ["INSPECTOR"]);
+  if (!hasRole(user, ["INSPECTOR"])) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
+  }
   const {
     projectId,
     date,
@@ -36,7 +39,7 @@ export async function POST(request: Request) {
     invoicePath,
     invoiceName,
   } = parsed.data;
-  if (process.env.DEMO_MODE === "true" && !process.env.DATABASE_URL)
+  if (process.env.DEMO_MODE === "true")
     return NextResponse.json(
       {
         ok: true,
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
     _sum: { amount: true },
     where: {
       categoryId,
-      transaction: { status: { in: ["APPROVED", "APPROVED_BY_DEAN"] } },
+      transaction: { status: { in: [PrismaStatus.APPROVED, PrismaStatus.APPROVED_BY_DEAN] } },
     },
   });
   const spent = Number(approved._sum.amount ?? 0);
