@@ -36,3 +36,5 @@ The server uploads invoices directly to S3 and stores only the private object ke
 ## Verification
 
 `npm run typecheck`, `npm test`, and `npm run build` are the local quality gates.
+
+`npm run build` regenerates the Prisma Client from `prisma/schema.prisma` before compiling. Apply schema changes to the database separately with `npm run db:push` when deploying database-backed features.
