@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   Bell,
   CircleHelp,
@@ -28,18 +27,13 @@ const navigation = [
 export function Sidebar({
   open = false,
   onClose,
+  role,
 }: {
   open?: boolean;
   onClose?: () => void;
+  role?: string | null;
 }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    const queryRole = new URLSearchParams(window.location.search).get("role");
-    const savedRole = sessionStorage.getItem("rd_demo_role");
-    setRole(queryRole || savedRole);
-  }, []);
-  const isApprover = role === "DEAN" || role === "SUPER_ADMIN";
   return (
     <>
       <button
@@ -54,11 +48,11 @@ export function Sidebar({
         </div>
         <nav className="nav" aria-label="Primary navigation">
           {navigation
-            .filter(([label]) => label !== "Approvals" || isApprover)
+            .filter(([label]) => label !== "Approvals" || role === "SUPER_ADMIN")
             .map(([label, href, Icon]) => (
               <Link
                 className={pathname.startsWith(href) ? "active" : ""}
-                href={role ? `${href}?role=${role}` : href}
+                href={href}
                 key={href}
               >
                 <Icon className="nav-icon" size={19} strokeWidth={1.8} />
@@ -69,14 +63,14 @@ export function Sidebar({
             <>
               <Link
                 className={pathname.startsWith("/admin/users") ? "active" : ""}
-                href="/admin/users?role=SUPER_ADMIN"
+                href="/admin/users"
               >
                 <UserRound className="nav-icon" size={19} />
                 <span>User accounts</span>
               </Link>
               <Link
                 className={pathname.startsWith("/admin/audit") ? "active" : ""}
-                href="/admin/audit?role=SUPER_ADMIN"
+                href="/admin/audit"
               >
                 <ShieldCheck className="nav-icon" size={19} />
                 <span>Audit log</span>

@@ -1,29 +1,28 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Loader2, X } from "lucide-react";
 
 export function ApprovalActions({
   code,
   status,
+  role,
+  onDecided,
 }: {
   code: string;
   status: string;
+  role: "DEAN" | "SUPER_ADMIN";
+  onDecided?: (nextStatus: string) => void;
 }) {
-  const [role, setRole] = useState<string>("DEAN");
+  const router = useRouter();
   const [committed, setCommitted] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(
-    () => setRole(sessionStorage.getItem("rd_demo_role") || "DEAN"),
-    [],
-  );
-
   const isAdmin = role === "SUPER_ADMIN";
-  const isOverride = isAdmin && status !== "PENDING_DEAN";
-  // DEAN acts on PENDING_DEAN; Admin can act on APPROVED_BY_DEAN or override
+  const isOverride = isAdmin && (status === "APPROVED" || status === "REJECTED");
   const canDecide =
-    status === "PENDING_DEAN" ||
+    (role === "DEAN" && status === "PENDING_DEAN") ||
     (isAdmin &&
       (status === "APPROVED_BY_DEAN" ||
         status === "APPROVED" ||
@@ -37,7 +36,6 @@ export function ApprovalActions({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-demo-role": role,
         },
         body: JSON.stringify({ transactionCode: code, decision }),
       });
@@ -50,6 +48,8 @@ export function ApprovalActions({
       setCommitted(
         isOverride ? `${code} decision changed to ${verb}` : `${code} ${verb}`,
       );
+      onDecided?.(data.status);
+      router.refresh();
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -61,33 +61,37 @@ export function ApprovalActions({
   if (committed) return <span className="decision-made">{committed}</span>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {error && <span className="approval-error">{error}</span>}
+    <div className="approval-control" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {error && <span className="approval-error" role="alert">{error}</span>}
       <div className="approval-actions">
-        <button
-          className="approve-button"
-          disabled={loading}
-          onClick={() => decide("APPROVE")}
-        >
-          {loading ? (
-            <Loader2 size={14} className="spin" />
-          ) : (
-            <Check size={14} />
-          )}{" "}
-          {isOverride ? "Change to approve" : "Approve"}
-        </button>
-        <button
-          className="reject-button"
-          disabled={loading}
-          onClick={() => decide("REJECT")}
-        >
-          {loading ? (
-            <Loader2 size={14} className="spin" />
-          ) : (
-            <X size={14} />
-          )}{" "}
-          {isOverride ? "Change to reject" : "Reject"}
-        </button>
+        {status !== "APPROVED" && (
+          <button
+            className="approve-button"
+            disabled={loading}
+            onClick={() => decide("APPROVE")}
+          >
+            {loading ? (
+              <Loader2 size={14} className="spin" />
+            ) : (
+              <Check size={14} />
+            )}{" "}
+            {isOverride ? "Change to approve" : "Approve"}
+          </button>
+        )}
+        {status !== "REJECTED" && (
+          <button
+            className="reject-button"
+            disabled={loading}
+            onClick={() => decide("REJECT")}
+          >
+            {loading ? (
+              <Loader2 size={14} className="spin" />
+            ) : (
+              <X size={14} />
+            )}{" "}
+            {isOverride ? "Change to reject" : "Reject"}
+          </button>
+        )}
       </div>
     </div>
   );

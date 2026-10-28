@@ -5,30 +5,51 @@ async function main() {
   const passwordHash = await bcrypt.hash("Demo@12345", 12);
   const dean = await db.user.upsert({
     where: { email: "dean@demo.edu" },
-    update: {},
+    update: {
+      department: "Research and Development",
+      institutionId: "RND-DEAN-001",
+      phoneNumber: "+91 98765 43211",
+    },
     create: {
       name: "Prof. Meena Sharma",
       email: "dean@demo.edu",
+      department: "Research and Development",
+      institutionId: "RND-DEAN-001",
+      phoneNumber: "+91 98765 43211",
       passwordHash,
       role: Role.DEAN,
     },
   });
   const admin = await db.user.upsert({
     where: { email: "admin@demo.edu" },
-    update: {},
+    update: {
+      department: "Administration",
+      institutionId: "RND-ADM-001",
+      phoneNumber: "+91 98765 43212",
+    },
     create: {
       name: "Ravi Menon",
       email: "admin@demo.edu",
+      department: "Administration",
+      institutionId: "RND-ADM-001",
+      phoneNumber: "+91 98765 43212",
       passwordHash,
       role: Role.SUPER_ADMIN,
     },
   });
   const inspector = await db.user.upsert({
     where: { email: "inspector@demo.edu" },
-    update: {},
+    update: {
+      department: "Computer Science",
+      institutionId: "RND-PI-001",
+      phoneNumber: "+91 98765 43210",
+    },
     create: {
       name: "Dr. Arvind Kumar",
       email: "inspector@demo.edu",
+      department: "Computer Science",
+      institutionId: "RND-PI-001",
+      phoneNumber: "+91 98765 43210",
       passwordHash,
       role: Role.INSPECTOR,
     },

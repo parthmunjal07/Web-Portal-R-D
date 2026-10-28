@@ -244,6 +244,9 @@ a {
   border-collapse: collapse;
   font-size: 13px;
 }
+.user-table {
+  min-width: 1250px;
+}
 .table th {
   background: #f8f9fa;
   color: #40484f;
@@ -591,6 +594,36 @@ textarea:focus-visible {
   background: #f5f8fa;
   border-color: #8caabb;
 }
+.delete-action {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #fecdd3;
+  border-radius: 4px;
+  padding: 7px 9px;
+  background: #fff1f2;
+  color: #b71329;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.delete-button:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+.delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.delete-error {
+  color: #b71329;
+  font-size: 11px;
+  max-width: 220px;
+}
 .card {
   transition:
     transform 0.18s ease,
@@ -605,6 +638,20 @@ textarea:focus-visible {
 }
 .table tbody tr:hover {
   background: #fbfdfe;
+}
+.table tbody tr.clickable-row {
+  cursor: pointer;
+}
+.table tbody tr.clickable-row:hover {
+  background: #f2f8fb;
+}
+.table tbody tr.clickable-row:focus-visible {
+  outline: 3px solid rgba(0, 90, 133, 0.35);
+  outline-offset: -3px;
+}
+.clickable-row .delete-action,
+.clickable-row .approval-control {
+  cursor: default;
 }
 .link:hover {
   text-decoration: underline;

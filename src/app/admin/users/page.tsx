@@ -1,21 +1,29 @@
-import { UserPlus, UserRoundCheck } from "lucide-react";
-import { demoAccounts } from "@/lib/domain";
+import { UserPlus } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentAdmin } from "@/lib/admin-auth";
+import { demoRecords } from "@/lib/demo-state";
+import { DeleteAction } from "../delete-action";
+import { redirect } from "next/navigation";
 
 // ── Normalised row shape ──────────────────────────────────────────────────────
 type UserRow = {
   id: string;
   name: string;
   email: string;
+  department: string;
+  institutionId: string;
+  phoneNumber: string;
+  role: string;
   roleTitle: string;
   active: boolean;
+  projectCount: number;
 };
 
 // ── Role label helper ─────────────────────────────────────────────────────────
 function roleTitle(r: string) {
   switch (r) {
     case "INSPECTOR":
-      return "Project Inspector";
+      return "Principal Inspector";
     case "DEAN":
       return "Dean of Research & Development";
     case "SUPER_ADMIN":
@@ -29,41 +37,44 @@ function roleTitle(r: string) {
 async function getUsers(): Promise<UserRow[]> {
   // Demo mode
   if (process.env.DEMO_MODE === "true") {
-    return demoAccounts.map((a) => ({
+    const records = await demoRecords();
+    return records.accounts.map((a) => ({
       id: a.email,
       name: a.name,
       email: a.email,
+      department: a.department,
+      institutionId: a.institutionId,
+      phoneNumber: a.phoneNumber,
+      role: a.role,
       roleTitle: a.title,
       active: true,
+      projectCount: a.role === "INSPECTOR" ? records.projects.length : 0,
     }));
   }
 
   // Real DB
   const users = await db.user.findMany({
     orderBy: [{ role: "desc" }, { name: "asc" }],
+    include: { _count: { select: { projects: true } } },
   });
 
   return users.map((u) => ({
     id: u.id,
     name: u.name,
     email: u.email,
+    department: u.department ?? "—",
+    institutionId: u.institutionId ?? "—",
+    phoneNumber: u.phoneNumber ?? "—",
+    role: u.role,
     roleTitle: roleTitle(u.role),
     active: u.active,
+    projectCount: u._count.projects,
   }));
 }
 
-import { currentUser, hasRole } from "@/lib/auth";
-import { parseRole } from "@/lib/permissions";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
 export default async function Users() {
-  const user = process.env.DEMO_MODE === "true" 
-    ? { role: parseRole((await cookies()).get("rd_demo_role")?.value) } 
-    : await currentUser();
-  if (!hasRole(user, ["SUPER_ADMIN"])) {
-    redirect("/dashboard");
-  }
+  const admin = await currentAdmin();
+  if (!admin) redirect("/dashboard");
 
   const users = await getUsers();
 
@@ -73,7 +84,7 @@ export default async function Users() {
         <div>
           <h1 className="title">User accounts</h1>
           <div className="eyebrow">
-            Create and deactivate Inspector and Dean access
+            Manage user accounts and access
           </div>
         </div>
         <button className="primary" disabled title="User creation not implemented in this demo">
@@ -81,12 +92,15 @@ export default async function Users() {
         </button>
       </div>
       <div className="table-wrap">
-        <table className="table">
+        <table className="table user-table">
           <thead>
             <tr>
               <th>USER</th>
               <th>ROLE</th>
+              <th>DEPARTMENT</th>
+              <th>INSTITUTION ID</th>
               <th>EMAIL</th>
+              <th>PHONE</th>
               <th>STATUS</th>
               <th>ACTION</th>
             </tr>
@@ -95,7 +109,7 @@ export default async function Users() {
             {users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={8}
                   style={{
                     textAlign: "center",
                     color: "#66717a",
@@ -110,7 +124,10 @@ export default async function Users() {
                 <tr key={account.id}>
                   <td>{account.name}</td>
                   <td>{account.roleTitle}</td>
+                  <td>{account.department}</td>
+                  <td>{account.institutionId}</td>
                   <td>{account.email}</td>
+                  <td>{account.phoneNumber}</td>
                   <td>
                     {account.active ? (
                       <span className="pill green">
@@ -128,9 +145,19 @@ export default async function Users() {
                     )}
                   </td>
                   <td>
-                    <button className="secondary" disabled title="User management not implemented in this demo">
-                      <UserRoundCheck size={15} /> Manage
-                    </button>
+                    <DeleteAction
+                      entity="users"
+                      id={account.id}
+                      name={account.name}
+                      disabledReason={
+                        account.id === admin.id ||
+                        (process.env.DEMO_MODE === "true" && account.role === "SUPER_ADMIN")
+                          ? "You cannot delete your own account."
+                          : account.projectCount > 0
+                            ? "Delete this user's projects first."
+                            : undefined
+                      }
+                    />
                   </td>
                 </tr>
               ))

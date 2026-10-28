@@ -1,5 +1,7 @@
 import { History, ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
+import { demoDeletions } from "@/lib/demo-state";
+import { demoAccounts, demoProjects, demoTransactions } from "@/lib/domain";
 
 // ── Normalised row shape ──────────────────────────────────────────────────────
 type AuditRow = {
@@ -38,7 +40,13 @@ const demoEvents: AuditRow[] = [
 // ── Data source ───────────────────────────────────────────────────────────────
 async function getAuditEvents(): Promise<AuditRow[]> {
   if (process.env.DEMO_MODE === "true") {
-    return demoEvents;
+    const deleted = await demoDeletions();
+    const removalEvents: AuditRow[] = [
+      ...deleted.users.map((id) => ({ id: `user-${id}`, action: "User deleted", entity: demoAccounts.find((account) => account.email === id)?.name ?? id, actor: "Ravi Menon", date: "Demo session" })),
+      ...deleted.projects.map((id) => ({ id: `project-${id}`, action: "Project deleted", entity: demoProjects.find((project) => project.id === id)?.code ?? id, actor: "Ravi Menon", date: "Demo session" })),
+      ...deleted.transactions.map((id) => ({ id: `transaction-${id}`, action: "Transaction deleted", entity: demoTransactions.find((transaction) => transaction.id === id)?.id ?? id, actor: "Ravi Menon", date: "Demo session" })),
+    ];
+    return [...removalEvents, ...demoEvents];
   }
 
   const entries = await db.auditEntry.findMany({
@@ -66,17 +74,28 @@ async function getAuditEvents(): Promise<AuditRow[]> {
 
   return entries.map((entry) => {
     let readableEntity = entry.entityId;
+    const before = entry.before;
+    const savedLabel =
+      before && typeof before === "object" && !Array.isArray(before)
+        ? typeof before.code === "string"
+          ? before.code
+          : typeof before.name === "string"
+            ? before.name
+            : null
+        : null;
     if (entry.entity === "Transaction") {
-      readableEntity = txMap[entry.entityId] || entry.entityId;
+      readableEntity = txMap[entry.entityId] || savedLabel || entry.entityId;
     } else if (entry.entity === "Project") {
-      readableEntity = projMap[entry.entityId] || entry.entityId;
+      readableEntity = projMap[entry.entityId] || savedLabel || entry.entityId;
+    } else if (entry.entity === "User") {
+      readableEntity = savedLabel || entry.entityId;
     }
 
     return {
       id: entry.id,
       action: entry.action.replace(/_/g, " "), // Basic cleanup, e.g. "APPROVAL_APPROVE" -> "APPROVAL APPROVE"
       entity: readableEntity,
-      actor: entry.actor.name,
+      actor: entry.actor?.name ?? entry.actorName ?? "Deleted user",
       date: entry.createdAt.toLocaleDateString("en-IN", {
         day: "numeric",
         month: "short",

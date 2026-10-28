@@ -7,10 +7,11 @@ import {
   FileCheck2,
   ShieldCheck,
 } from "lucide-react";
-import { demoProjects, money } from "@/lib/domain";
+import { money } from "@/lib/domain";
 import { db } from "@/lib/db";
 import { ExportActions } from "./report-actions";
 import { ClosureSelector } from "./closure-selector";
+import { demoRecords } from "@/lib/demo-state";
 
 // ── Readiness state per project ───────────────────────────────────────────────
 type ReadinessState = "ready" | "pending" | "no-activity";
@@ -28,7 +29,7 @@ type ReadinessRow = {
 async function getReadiness(): Promise<ReadinessRow[]> {
   // Demo: original data, all show "Ready"
   if (process.env.DEMO_MODE === "true") {
-    return demoProjects.map((p) => ({
+    return (await demoRecords()).projects.map((p) => ({
       id: p.id,
       code: p.code,
       name: p.name,

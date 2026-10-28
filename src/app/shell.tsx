@@ -8,7 +8,7 @@ export function AppShell({
   user,
 }: {
   children: React.ReactNode;
-  user?: { name: string } | null;
+  user?: { name: string; role: string } | null;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -19,7 +19,7 @@ export function AppShell({
 
   return (
     <div className="shell">
-      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <Sidebar open={open} onClose={() => setOpen(false)} role={user?.role} />
       <div className="main">
         <Topbar onMenu={() => setOpen(true)} user={user} />
         {children}

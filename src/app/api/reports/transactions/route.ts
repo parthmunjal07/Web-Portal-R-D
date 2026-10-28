@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { demoTransactions, money } from "@/lib/domain";
+import { money } from "@/lib/domain";
 import { db } from "@/lib/db";
+import { demoRecords } from "@/lib/demo-state";
 
 export type TxCsvRow = {
   id: string;
@@ -16,7 +17,7 @@ export type TxCsvRow = {
 export async function GET() {
   // ── Demo path ──────────────────────────────────────────────────────────────
   if (process.env.DEMO_MODE === "true") {
-    const rows: TxCsvRow[] = demoTransactions.map((t) => ({
+    const rows: TxCsvRow[] = (await demoRecords()).transactions.map((t) => ({
       id: t.id,
       date: t.date,
       vendor: t.vendor,

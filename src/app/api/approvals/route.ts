@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { currentUser, hasRole } from "@/lib/auth";
 import { parseRole } from "@/lib/permissions";
 import { cookies } from "next/headers";
+import { demoRecords, setDemoApprovalStatus } from "@/lib/demo-state";
+import { nextApprovalStatus } from "@/lib/approval-transitions";
+import type { TransactionStatus } from "@/lib/domain";
 
 const schema = z.object({
   transactionCode: z.string().min(1),
@@ -33,12 +36,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
   }
 
-  const role = user?.role ?? parseRole((await cookies()).get("rd_demo_role")?.value);
+  const role = user!.role;
   const { transactionCode, decision, remarks } = parsed.data;
 
+  const invalidStatusMessage = role === "DEAN"
+    ? "This transaction is not awaiting Dean review."
+    : "This transaction has not yet received Dean approval and is not ready for final review.";
+
   // ── DEMO_MODE without a real DB ───────────────────────────────────────────
-  if (process.env.DEMO_MODE === "true")
-    return NextResponse.json({ ok: true, demo: true });
+  if (process.env.DEMO_MODE === "true") {
+    const transaction = (await demoRecords()).transactions.find((t) => t.id === transactionCode);
+    if (!transaction)
+      return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
+    const nextStatus = nextApprovalStatus(role, transaction.status, decision);
+    if (!nextStatus)
+      return NextResponse.json({ error: invalidStatusMessage }, { status: 409 });
+    await setDemoApprovalStatus(transactionCode, nextStatus);
+    return NextResponse.json({ ok: true, status: nextStatus, demo: true });
+  }
 
   // ── Real DB path ──────────────────────────────────────────────────────────
   const transaction = await db.transaction.findUnique({
@@ -50,40 +65,10 @@ export async function POST(request: Request) {
       { status: 404 },
     );
 
-  // Determine the approval stage + next status based on role and current status
-  const isDean = role === "DEAN";
-  const isAdmin = role === "SUPER_ADMIN";
-
-  let stage: "DEAN" | "SUPER_ADMIN";
-  let nextStatus: "APPROVED_BY_DEAN" | "APPROVED" | "REJECTED";
-
-  if (isDean) {
-    if (transaction.status !== "PENDING_DEAN")
-      return NextResponse.json(
-        { error: "This transaction is not awaiting Dean review." },
-        { status: 409 },
-      );
-    stage = "DEAN";
-    nextStatus = decision === "APPROVE" ? "APPROVED_BY_DEAN" : "REJECTED";
-  } else if (isAdmin) {
-    // Admin can give the final approval after Dean, or override any prior decision
-    if (
-      transaction.status !== "APPROVED_BY_DEAN" &&
-      transaction.status !== "APPROVED" &&
-      transaction.status !== "REJECTED"
-    )
-      return NextResponse.json(
-        {
-          error:
-            "This transaction has not yet received Dean approval and is not ready for final review.",
-        },
-        { status: 409 },
-      );
-    stage = "SUPER_ADMIN";
-    nextStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
-  } else {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
-  }
+  const nextStatus = nextApprovalStatus(role, transaction.status as TransactionStatus, decision);
+  if (!nextStatus)
+    return NextResponse.json({ error: invalidStatusMessage }, { status: 409 });
+  const stage = role === "DEAN" ? "DEAN" : "SUPER_ADMIN";
 
   const previousStatus = transaction.status;
 

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
-import { demoProjects, money } from "@/lib/domain";
+import { money } from "@/lib/domain";
 import { db } from "@/lib/db";
+import { demoRecords } from "@/lib/demo-state";
 import { Status } from "../../ui";
 
 type TimelineEvent = {
@@ -42,7 +43,8 @@ function deriveStatus(endDate: Date, budget: number, spent: number): string {
 async function getProject(id: string): Promise<ProjectData> {
   // Demo: find in array (fall back to first as original did)
   if (process.env.DEMO_MODE === "true") {
-    const p = demoProjects.find((x) => x.id === id) ?? demoProjects[0];
+    const p = (await demoRecords()).projects.find((x) => x.id === id);
+    if (!p) notFound();
     return {
       id: p.id,
       code: p.code,
@@ -145,7 +147,7 @@ async function getProject(id: string): Promise<ProjectData> {
       )}.`,
     });
     for (const a of t.approvals) {
-      const reviewerName = reviewerMap.get(a.reviewerId) || a.reviewerId;
+      const reviewerName = reviewerMap.get(a.reviewerId) || a.reviewerName || a.reviewerId;
       timeline.push({
         id: `appr_${a.id}`,
         date: a.createdAt,
@@ -287,7 +289,7 @@ export default async function ProjectDetail({
             <p className="sub">Funding agency</p>
             <p>{p.funders.length > 0 ? p.funders.join(", ") : "—"}</p>
 
-            <p className="sub">Co-project inspectors</p>
+            <p className="sub">Co-principal inspectors</p>
             <p>
               {p.coInspectors.length > 0 ? p.coInspectors.join(", ") : "—"}
             </p>

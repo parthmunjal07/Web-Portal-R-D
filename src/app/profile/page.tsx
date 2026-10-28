@@ -1,86 +1,67 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { demoAccounts, type Role } from "@/lib/domain";
+import { demoRecords } from "@/lib/demo-state";
+import { parseRole } from "@/lib/permissions";
+import { ProfileForm, type ProfileData } from "./profile-form";
 
-// ── Role label helper ─────────────────────────────────────────────────────────
-function roleTitle(r: string) {
-  switch (r) {
+function roleTitle(role: string) {
+  switch (role) {
     case "INSPECTOR":
-      return "Project Inspector";
+      return "Principal Inspector";
     case "DEAN":
       return "Dean of Research & Development";
     case "SUPER_ADMIN":
       return "Super Admin";
     default:
-      return r;
+      return role;
   }
 }
 
-// ── Data source ───────────────────────────────────────────────────────────────
-async function getProfile(
-  roleParam?: string
-): Promise<{ name: string; email: string; roleTitle: string }> {
+async function getProfile(): Promise<ProfileData> {
   if (process.env.DEMO_MODE === "true") {
-    const role = (
-      roleParam === "DEAN" || roleParam === "SUPER_ADMIN"
-        ? roleParam
-        : "INSPECTOR"
-    ) as Role;
-    const account = demoAccounts.find((a) => a.role === role) ?? demoAccounts[0];
+    const store = await cookies();
+    if (store.get("rd_demo")?.value !== "true") redirect("/login");
+    const role = parseRole(store.get("rd_demo_role")?.value);
+    const account = (await demoRecords()).accounts.find(
+      (user) => user.role === role,
+    );
+    if (!account) redirect("/login");
     return {
       name: account.name,
       email: account.email,
       roleTitle: account.title,
+      department: account.department,
+      institutionId: account.institutionId,
+      phoneNumber: account.phoneNumber,
     };
   }
 
   const user = await currentUser();
-  if (!user) {
-    // Fallback if accessed without session in real mode
-    return { name: "Guest", email: "guest@example.com", roleTitle: "None" };
-  }
+  if (!user?.active) redirect("/login");
   return {
     name: user.name,
     email: user.email,
     roleTitle: roleTitle(user.role),
+    department: user.department ?? "",
+    institutionId: user.institutionId ?? "",
+    phoneNumber: user.phoneNumber ?? "",
   };
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-import { cookies } from "next/headers";
-
 export default async function Profile() {
-  const cookieStore = await cookies();
-  const role = cookieStore.get("rd_demo_role")?.value;
-  const profile = await getProfile(role);
+  const profile = await getProfile();
 
   return (
     <main className="content">
       <div className="page-header">
         <div>
           <h1 className="title">Profile</h1>
-          <div className="eyebrow">Account and session security</div>
+          <div className="eyebrow">Account and contact details</div>
         </div>
       </div>
       <div className="panel" style={{ maxWidth: 700 }}>
-        <div className="form-grid">
-          <div className="field">
-            <label>Full name</label>
-            <input defaultValue={profile.name} disabled />
-          </div>
-          <div className="field">
-            <label>Role</label>
-            <input defaultValue={profile.roleTitle} disabled />
-          </div>
-          <div className="field full">
-            <label>Institutional email</label>
-            <input defaultValue={profile.email} disabled />
-          </div>
-        </div>
-        <div className="form-actions">
-          <button className="primary" disabled title="Profile editing not implemented in this demo">
-            Save profile
-          </button>
-        </div>
+        <ProfileForm profile={profile} />
         <hr
           style={{
             border: 0,
@@ -89,9 +70,7 @@ export default async function Profile() {
           }}
         />
         <h2>Sessions</h2>
-        <p className="sub">
-          Your current session is protected by a secure httpOnly cookie.
-        </p>
+        <p className="sub">Your current session is active.</p>
         <button
           className="secondary"
           style={{ marginTop: 12 }}

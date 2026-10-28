@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { money } from "./domain";
+import { money } from "@/lib/domain";
 describe("money and budget rules", () => {
   it("formats INR values", () => expect(money(3250000)).toBe("₹32,50,000"));
   it("computes remaining balance", () => expect(1500000 - 675000).toBe(825000));

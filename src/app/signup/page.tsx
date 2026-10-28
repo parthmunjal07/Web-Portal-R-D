@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Role } from "@/lib/domain";
@@ -8,16 +7,17 @@ import type { Role } from "@/lib/domain";
 export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState("");
+  const [institutionId, setInstitutionId] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("INSPECTOR");
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const router = useRouter();
-
   async function handleSignup() {
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !department || !institutionId || !phoneNumber) {
       setError("Please fill out all fields");
       return;
     }
@@ -27,13 +27,13 @@ export default function Signup() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role, department, institutionId, phoneNumber }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || "Signup failed");
       } else {
-        router.push("/dashboard");
+        window.location.assign("/dashboard");
       }
     } catch (e) {
       setError("Network error");
@@ -85,6 +85,34 @@ export default function Signup() {
             />
           </div>
           <div className="field">
+            <label>Department</label>
+            <input
+              placeholder="e.g. Computer Science"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="field">
+            <label>Institution ID</label>
+            <input
+              placeholder="e.g. RND-PI-001"
+              value={institutionId}
+              onChange={(e) => setInstitutionId(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="field">
+            <label>Phone number</label>
+            <input
+              type="tel"
+              placeholder="e.g. +91 98765 43210"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="field">
             <label>Password</label>
             <input 
               type="password" 
@@ -97,7 +125,7 @@ export default function Signup() {
           <div className="field">
             <label>Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={loading}>
-              <option value="INSPECTOR">Project Inspector</option>
+              <option value="INSPECTOR">Principal Inspector</option>
               <option value="DEAN">Dean of Research</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>

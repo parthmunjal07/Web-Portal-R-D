@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { demoTransactions, money } from "@/lib/domain";
+import { money } from "@/lib/domain";
 import { db } from "@/lib/db";
 import { Status } from "../ui";
+import { currentAdmin } from "@/lib/admin-auth";
+import { DeleteAction } from "../admin/delete-action";
+import { demoRecords } from "@/lib/demo-state";
+import { ClickableTableRow } from "../clickable-table-row";
 
 // ── Normalised row type ───────────────────────────────────────────────────────
 type TxRow = {
@@ -29,7 +33,7 @@ function statusLabel(s: string): string {
 async function getTransactions(): Promise<TxRow[]> {
   // Demo: original data, exact same labels as before
   if (process.env.DEMO_MODE === "true") {
-    return demoTransactions.map((t) => ({
+    return (await demoRecords()).transactions.map((t) => ({
       id: t.id,
       date: t.date,
       vendor: t.vendor,
@@ -66,7 +70,7 @@ async function getTransactions(): Promise<TxRow[]> {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default async function Transactions() {
-  const transactions = await getTransactions();
+  const [transactions, admin] = await Promise.all([getTransactions(), currentAdmin()]);
 
   return (
     <main className="content">
@@ -92,13 +96,14 @@ export default async function Transactions() {
               <th>AMOUNT</th>
               <th>STATUS</th>
               <th></th>
+              {admin && <th>ACTION</th>}
             </tr>
           </thead>
           <tbody>
             {transactions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={admin ? 8 : 7}
                   style={{
                     textAlign: "center",
                     color: "#66717a",
@@ -110,7 +115,7 @@ export default async function Transactions() {
               </tr>
             ) : (
               transactions.map((t) => (
-                <tr key={t.id}>
+                <ClickableTableRow key={t.id} href={`/transactions/${t.id}`} label={`Open transaction ${t.id}`}>
                   <td>{t.id}</td>
                   <td>{t.date}</td>
                   <td>
@@ -127,7 +132,16 @@ export default async function Transactions() {
                       Open
                     </Link>
                   </td>
-                </tr>
+                  {admin && (
+                    <td>
+                      <DeleteAction
+                        entity="transactions"
+                        id={t.id}
+                        name={t.id}
+                      />
+                    </td>
+                  )}
+                </ClickableTableRow>
               ))
             )}
           </tbody>

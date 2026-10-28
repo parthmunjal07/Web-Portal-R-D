@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { demoAccounts, type Role } from "@/lib/domain";
+import { type Role } from "@/lib/domain";
 
-export function LoginForm({ isDemoMode }: { isDemoMode: boolean }) {
+type DemoAccount = { role: Role; name: string; email: string; title: string };
+
+export function LoginForm({ isDemoMode, demoAccounts }: { isDemoMode: boolean; demoAccounts: DemoAccount[] }) {
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role>("INSPECTOR");
   const [email, setEmail] = useState("");
@@ -15,13 +16,10 @@ export function LoginForm({ isDemoMode }: { isDemoMode: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const router = useRouter();
-
   const selectAccount = (account: (typeof demoAccounts)[number]) => {
     setRole(account.role);
     setEmail(account.email);
     setPassword("Demo@12345");
-    sessionStorage.setItem("rd_demo_role", account.role);
   };
 
   async function handleStep1() {
@@ -59,7 +57,7 @@ export function LoginForm({ isDemoMode }: { isDemoMode: boolean }) {
       if (!res.ok) {
         setError(data.error || "Verification failed");
       } else {
-        router.push("/dashboard");
+        window.location.assign("/dashboard");
       }
     } catch (e) {
       setError("Network error");

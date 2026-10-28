@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
-import { demoTransactions, money } from "@/lib/domain";
+import { money, type TransactionStatus } from "@/lib/domain";
 import { db } from "@/lib/db";
+import { demoRecords } from "@/lib/demo-state";
+import { currentUser } from "@/lib/auth";
+import { parseRole } from "@/lib/permissions";
+import { cookies } from "next/headers";
+import { ApprovalActions } from "@/app/approvals/approval-actions";
 import { Status } from "../../ui";
 
 // ── Normalised shape ──────────────────────────────────────────────────────────
@@ -19,6 +24,7 @@ type TxDetail = {
   category: string;
   description: string;
   amount: number;
+  status: TransactionStatus;
   statusLabel: string;
   // Budget impact (first line's category)
   categoryAllocation: number;
@@ -58,8 +64,8 @@ function currentStep(s: string): string | null {
 async function getTxDetail(id: string): Promise<TxDetail> {
   // ── Demo path ──────────────────────────────────────────────────────────────
   if (process.env.DEMO_MODE === "true") {
-    const t =
-      demoTransactions.find((x) => x.id === id) ?? demoTransactions[0];
+    const t = (await demoRecords()).transactions.find((x) => x.id === id);
+    if (!t) notFound();
     return {
       code: t.id,
       projectName: "AI-Based Crop Disease Detection",
@@ -68,6 +74,7 @@ async function getTxDetail(id: string): Promise<TxDetail> {
       category: "Equipment",
       description: "GPU servers for model training and image processing workloads.",
       amount: t.amount,
+      status: t.status,
       statusLabel: statusLabel(t.status),
       categoryAllocation: 700000,
       alreadyApprovedInCategory: 350000,
@@ -144,7 +151,7 @@ async function getTxDetail(id: string): Promise<TxDetail> {
         minute: "2-digit",
       }),
       label: `${stageLabel} ${decisionLabel}${a.remarks ? ` — "${a.remarks}"` : ""}`,
-      by: byId[a.reviewerId] ?? "Unknown",
+      by: byId[a.reviewerId] ?? a.reviewerName ?? "Unknown",
     };
   });
 
@@ -165,6 +172,7 @@ async function getTxDetail(id: string): Promise<TxDetail> {
     category: firstLine?.category.name ?? "—",
     description: tx.description,
     amount: txAmount,
+    status: tx.status,
     statusLabel: statusLabel(tx.status),
     categoryAllocation: firstLine ? Number(firstLine.category.allocated) : 0,
     alreadyApprovedInCategory: alreadyApproved,
@@ -177,7 +185,7 @@ async function getTxDetail(id: string): Promise<TxDetail> {
       hour: "2-digit",
       minute: "2-digit",
     }),
-    createdBy: byId[tx.createdById] ?? "Unknown",
+    createdBy: byId[tx.createdById] ?? tx.createdByName ?? "Unknown",
     approvals: approvalEntries,
     currentStep: currentStep(tx.status),
   };
@@ -192,7 +200,17 @@ export default async function TransactionDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const t = await getTxDetail(id);
+  const [t, role] = await Promise.all([
+    getTxDetail(id),
+    process.env.DEMO_MODE === "true"
+      ? cookies().then((store) => parseRole(store.get("rd_demo_role")?.value))
+      : currentUser().then((user) => user?.active ? user.role : null),
+  ]);
+  const reviewerRole =
+    (role === "DEAN" && t.status === "PENDING_DEAN") ||
+    (role === "SUPER_ADMIN" && t.status === "APPROVED_BY_DEAN")
+      ? role
+      : null;
 
   const afterThisTx = t.alreadyApprovedInCategory + t.amount;
   const remaining = t.categoryAllocation - afterThisTx;
@@ -221,6 +239,16 @@ export default async function TransactionDetail({
           <Status status={t.statusLabel} />
         </div>
       </div>
+
+      {reviewerRole && (
+        <div className="panel" style={{ marginBottom: 24 }}>
+          <h2>{reviewerRole === "DEAN" ? "Dean review" : "Final review"}</h2>
+          <p className="sub" style={{ marginBottom: 16 }}>
+            Review the transaction details and invoice, then record your decision.
+          </p>
+          <ApprovalActions code={t.code} status={t.status} role={reviewerRole} />
+        </div>
+      )}
 
       <div className="detail-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
         {/* ── Left column ── */}

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
-import { demoProjects, money } from "@/lib/domain";
+import { money } from "@/lib/domain";
+import { demoRecords } from "@/lib/demo-state";
 import { db } from "@/lib/db";
 import { FileText, ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
@@ -30,7 +31,9 @@ type PrintData = {
 async function getPrintData(id: string): Promise<PrintData> {
   // Demo mode
   if (process.env.DEMO_MODE === "true") {
-    const p = demoProjects.find((x) => x.id === id) ?? demoProjects[0];
+    const records = await demoRecords();
+    const p = records.projects.find((x) => x.id === id);
+    if (!p) notFound();
     return {
       id: p.id,
       code: p.code,
@@ -44,22 +47,15 @@ async function getPrintData(id: string): Promise<PrintData> {
         { name: "Travel", allocated: 300000, spent: 120000 },
         { name: "Research Personnel", allocated: 500000, spent: 205000 },
       ],
-      transactions: [
-        {
-          code: "TX-4088",
-          date: "Oct 22, 2023",
-          vendor: "Global Chemicals Inc.",
-          amount: 12500,
+      transactions: records.transactions
+        .filter((transaction) => transaction.project === p.code)
+        .map((transaction) => ({
+          code: transaction.id,
+          date: transaction.date,
+          vendor: transaction.vendor,
+          amount: transaction.amount,
           category: "Equipment",
-        },
-        {
-          code: "TX-4085",
-          date: "Oct 18, 2023",
-          vendor: "Dr. A. Kumar",
-          amount: 45000,
-          category: "Travel",
-        },
-      ],
+        })),
     };
   }
 

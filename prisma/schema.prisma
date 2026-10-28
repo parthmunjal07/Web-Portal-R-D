@@ -28,6 +28,9 @@ model User {
   id String @id @default(cuid())
   name String
   email String @unique
+  department String?
+  institutionId String?
+  phoneNumber String?
   passwordHash String
   role Role
   active Boolean @default(true)
@@ -89,6 +92,7 @@ model Transaction {
   projectId String
   project Project @relation(fields: [projectId], references: [id])
   createdById String
+  createdByName String?
   lines TransactionLine[]
   invoice Invoice?
   approvals Approval[]
@@ -121,6 +125,7 @@ model Approval {
   transactionId String
   transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   reviewerId String
+  reviewerName String?
   createdAt DateTime @default(now())
 }
 model AuditEntry {
@@ -130,8 +135,9 @@ model AuditEntry {
   entityId String
   before Json?
   after Json?
-  actorId String
-  actor User @relation(fields: [actorId], references: [id])
+  actorId String?
+  actorName String?
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 }
 model Session {

@@ -1,20 +1,9 @@
 import Link from "next/link";
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
-import { demoProjects, money } from "@/lib/domain";
 import { db } from "@/lib/db";
-import { Status } from "../ui";
-
-// ── Normalised row type ───────────────────────────────────────────────────────
-type ProjectRow = {
-  id: string;
-  code: string;
-  name: string;
-  owner: string;
-  funder: string;
-  budget: number;
-  spent: number;
-  status: string;
-};
+import { currentAdmin } from "@/lib/admin-auth";
+import { demoRecords } from "@/lib/demo-state";
+import { ProjectTableRow, type ProjectRow } from "./project-table-row";
 
 // ── Derive a human status from DB fields ──────────────────────────────────────
 function deriveStatus(endDate: Date, budget: number, spent: number): string {
@@ -29,7 +18,7 @@ function deriveStatus(endDate: Date, budget: number, spent: number): string {
 async function getProjects(): Promise<ProjectRow[]> {
   // Demo: keep original data exactly
   if (process.env.DEMO_MODE === "true") {
-    return demoProjects.map((p) => ({
+    return (await demoRecords()).projects.map((p) => ({
       id: p.id,
       code: p.code,
       name: p.name,
@@ -81,7 +70,7 @@ async function getProjects(): Promise<ProjectRow[]> {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default async function Projects() {
-  const projects = await getProjects();
+  const [projects, admin] = await Promise.all([getProjects(), currentAdmin()]);
 
   return (
     <main className="content">
@@ -107,13 +96,14 @@ export default async function Projects() {
               <th>SPENT</th>
               <th>REMAINING</th>
               <th>STATUS</th>
+              {admin && <th>ACTION</th>}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={admin ? 8 : 7}
                   style={{
                     textAlign: "center",
                     color: "#66717a",
@@ -125,22 +115,7 @@ export default async function Projects() {
               </tr>
             ) : (
               projects.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <Link className="link" href={`/projects/${p.id}`}>
-                      {p.name}
-                    </Link>
-                    <span className="sub">{p.code}</span>
-                  </td>
-                  <td>{p.owner}</td>
-                  <td>{p.funder}</td>
-                  <td>{money(p.budget)}</td>
-                  <td>{money(p.spent)}</td>
-                  <td>{money(p.budget - p.spent)}</td>
-                  <td>
-                    <Status status={p.status} />
-                  </td>
-                </tr>
+                <ProjectTableRow key={p.id} project={p} canDelete={!!admin} />
               ))
             )}
           </tbody>

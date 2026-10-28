@@ -2,14 +2,15 @@ import "./globals.css";
 import { AppShell } from "./shell";
 import { currentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { demoAccounts, type Role } from "@/lib/domain";
+import { type Role } from "@/lib/domain";
+import { demoRecords } from "@/lib/demo-state";
 
 async function getUser() {
   if (process.env.DEMO_MODE === "true") {
     const role = (await cookies()).get("rd_demo_role")?.value as Role | undefined;
     if (role) {
-      const demoUser = demoAccounts.find((a) => a.role === role);
-      if (demoUser) return { name: demoUser.name };
+      const demoUser = (await demoRecords()).accounts.find((a) => a.role === role);
+      if (demoUser) return { name: demoUser.name, role: demoUser.role };
     }
   }
   return await currentUser();

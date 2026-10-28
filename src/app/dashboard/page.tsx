@@ -8,15 +8,18 @@ import {
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
 import {
   demoAccounts,
-  demoProjects,
-  demoTransactions,
   money,
   type Role,
   type TransactionStatus,
 } from "@/lib/domain";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { demoRecords } from "@/lib/demo-state";
 import { Status } from "../ui";
+import { ClickableTableRow } from "../clickable-table-row";
+import { getApprovalRows } from "@/lib/approval-rows";
+import { ApprovalTable } from "../approvals/approval-table";
+import { parseRole } from "@/lib/permissions";
 
 // ── Normalised types used by the render layer ─────────────────────────────────
 type ProjectRow = {
@@ -45,8 +48,6 @@ type DashboardData = {
   totalSanctioned: number;
   approvedSpend: number;
   availableBalance: number;
-  /** Dean: # of PENDING_DEAN txns; Admin: # of APPROVED_BY_DEAN txns */
-  reviewCount: number;
   projects: ProjectRow[];
   transactions: TxRow[];
 };
@@ -76,14 +77,18 @@ function txStatusLabel(s: string): string {
 }
 
 // ── Demo data in the normalised shape ─────────────────────────────────────────
-function getDemoData(): DashboardData {
+async function getDemoData(): Promise<DashboardData> {
+  const { projects, transactions } = await demoRecords();
+  const totalSanctioned = projects.reduce((sum, project) => sum + project.budget, 0);
+  const approvedSpend = transactions
+    .filter((transaction) => transaction.status === "APPROVED" || transaction.status === "APPROVED_BY_DEAN")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   return {
-    projectCount: 4,
-    totalSanctioned: 3250000,
-    approvedSpend: 1284500,
-    availableBalance: 1790500,
-    reviewCount: 1,
-    projects: demoProjects.map((p) => ({
+    projectCount: projects.length,
+    totalSanctioned,
+    approvedSpend,
+    availableBalance: totalSanctioned - approvedSpend,
+    projects: projects.map((p) => ({
       id: p.id,
       code: p.code,
       name: p.name,
@@ -93,7 +98,7 @@ function getDemoData(): DashboardData {
       spent: p.spent,
       status: p.status,
     })),
-    transactions: demoTransactions.map((t) => ({
+    transactions: transactions.map((t) => ({
       id: t.id,
       date: t.date,
       vendor: t.vendor,
@@ -109,7 +114,6 @@ function getDemoData(): DashboardData {
 async function getDbData(role: Role, userId: string | null): Promise<DashboardData> {
   const isInspector = role === "INSPECTOR";
   const isDean = role === "DEAN";
-  const isAdmin = role === "SUPER_ADMIN";
 
   // Scope filter for inspector (only their projects)
   const projectScope = isInspector && userId ? { ownerId: userId } : {};
@@ -120,7 +124,7 @@ async function getDbData(role: Role, userId: string | null): Promise<DashboardDa
   ];
 
   // ── KPI aggregates ──────────────────────────────────────────────────────────
-  const [projectAgg, spentAgg, reviewCount] = await Promise.all([
+  const [projectAgg, spentAgg] = await Promise.all([
     db.project.aggregate({
       _sum: { totalBudget: true },
       _count: { id: true },
@@ -137,11 +141,6 @@ async function getDbData(role: Role, userId: string | null): Promise<DashboardDa
       },
     }),
 
-    isDean
-      ? db.transaction.count({ where: { status: "PENDING_DEAN" } })
-      : isAdmin
-        ? db.transaction.count({ where: { status: "APPROVED_BY_DEAN" } })
-        : Promise.resolve(0),
   ]);
 
   const totalSanctioned = Number(projectAgg._sum?.totalBudget ?? 0);
@@ -217,7 +216,6 @@ async function getDbData(role: Role, userId: string | null): Promise<DashboardDa
     totalSanctioned,
     approvedSpend,
     availableBalance: totalSanctioned - approvedSpend,
-    reviewCount,
     projects,
     transactions,
   };
@@ -229,16 +227,11 @@ import { cookies } from "next/headers";
 export default async function Dashboard() {
   const cookieStore = await cookies();
   const rawRole = cookieStore.get("rd_demo_role")?.value;
-  const role = (
-    rawRole === "DEAN" || rawRole === "SUPER_ADMIN"
-      ? rawRole
-      : "INSPECTOR"
-  ) as Role;
-
   const isDemo = process.env.DEMO_MODE === "true";
 
   // Identity: demo uses the demoAccounts array; real uses the session user
   const sessionUser = isDemo ? null : await currentUser();
+  const role: Role = isDemo ? parseRole(rawRole) : sessionUser?.role ?? "INSPECTOR";
   const account = isDemo
     ? demoAccounts.find((a) => a.role === role) ?? demoAccounts[0]
     : {
@@ -248,7 +241,7 @@ export default async function Dashboard() {
             ? "Dean of Research & Development"
             : role === "SUPER_ADMIN"
               ? "Super Admin"
-              : "Project Inspector",
+              : "Principal Inspector",
         focus:
           role === "DEAN"
             ? "Review every transaction awaiting Dean approval"
@@ -257,9 +250,14 @@ export default async function Dashboard() {
               : "Manage your projects and submit invoice-backed spend",
       };
 
-  const data = isDemo
-    ? getDemoData()
-    : await getDbData(role, sessionUser?.id ?? null);
+  const [data, approvalRows] = await Promise.all([
+    isDemo ? getDemoData() : getDbData(role, sessionUser?.id ?? null),
+    role === "DEAN"
+      ? getApprovalRows([PrismaStatus.PENDING_DEAN])
+      : role === "SUPER_ADMIN"
+        ? getApprovalRows([PrismaStatus.APPROVED_BY_DEAN])
+        : Promise.resolve([]),
+  ]);
 
   const isInspector = role === "INSPECTOR";
   const isDean = role === "DEAN";
@@ -309,7 +307,7 @@ export default async function Dashboard() {
           value={
             isInspector
               ? money(data.approvedSpend)
-              : String(data.reviewCount)
+              : String(approvalRows.length)
           }
           icon={
             isInspector ? (
@@ -326,6 +324,17 @@ export default async function Dashboard() {
           green
         />
       </section>
+
+      {(role === "DEAN" || role === "SUPER_ADMIN") && (
+        <section aria-labelledby="dashboard-approvals-heading">
+          <div className="section-heading">
+            <h2 id="dashboard-approvals-heading">
+              {isDean ? "Pending Dean approvals" : "Pending final approvals"}
+            </h2>
+          </div>
+          <ApprovalTable initialRows={approvalRows} role={role} queue />
+        </section>
+      )}
 
       {/* ── Projects table ── */}
       <section>
@@ -364,7 +373,7 @@ export default async function Dashboard() {
                 </tr>
               ) : (
                 data.projects.map((p) => (
-                  <tr key={p.id}>
+                  <ClickableTableRow key={p.id} href={`/projects/${p.id}`} label={`Open project ${p.name}`}>
                     <td>
                       <Link
                         className="table-link"
@@ -412,7 +421,7 @@ export default async function Dashboard() {
                         ⋮
                       </Link>
                     </td>
-                  </tr>
+                  </ClickableTableRow>
                 ))
               )}
             </tbody>
@@ -421,6 +430,7 @@ export default async function Dashboard() {
       </section>
 
       {/* ── Transactions table ── */}
+      {isInspector && (
       <section>
         <div className="section-heading">
           <h2>
@@ -458,7 +468,7 @@ export default async function Dashboard() {
                 </tr>
               ) : (
                 data.transactions.map((t) => (
-                  <tr key={t.id}>
+                  <ClickableTableRow key={t.id} href={`/transactions/${t.id}`} label={`Open transaction ${t.id}`}>
                     <td>{t.id}</td>
                     <td>{t.date}</td>
                     <td>
@@ -485,13 +495,14 @@ export default async function Dashboard() {
                         }
                       />
                     </td>
-                  </tr>
+                  </ClickableTableRow>
                 ))
               )}
             </tbody>
           </table>
         </div>
       </section>
+      )}
     </main>
   );
 }
