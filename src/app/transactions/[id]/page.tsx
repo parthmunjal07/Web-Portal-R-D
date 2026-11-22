@@ -53,7 +53,7 @@ function statusLabel(s: string): string {
 // ── Current step label (null = resolved) ─────────────────────────────────────
 function currentStep(s: string): string | null {
   switch (s) {
-    case "DRAFT":            return "Awaiting submission by Inspector";
+    case "DRAFT":            return "Awaiting submission by Investigator";
     case "PENDING_DEAN":     return "Pending Dean review";
     case "APPROVED_BY_DEAN": return "Pending final approval (Super Admin)";
     default:                 return null; // APPROVED / REJECTED — fully resolved

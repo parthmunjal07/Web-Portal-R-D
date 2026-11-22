@@ -2,6 +2,8 @@
 
 Next.js App Router portal for academic R&D project budgets, invoice-backed transactions, and Dean/Super Admin approvals.
 
+> **Terminology:** “Investigator” in this project corresponds to the `INSPECTOR` role and related inspector fields in the Prisma schema.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env` and set `DATABASE_URL` and `SESSION_SECRET`.
@@ -12,7 +14,7 @@ Next.js App Router portal for academic R&D project budgets, invoice-backed trans
 
 Demo credentials use `Demo@12345`: `inspector@demo.edu`, `dean@demo.edu`, and `admin@demo.edu`.
 
-The login screen includes role cards for each demo account. After verification, the Inspector dashboard focuses on owned projects and new transactions, the Dean dashboard focuses on the approval queue, and the Super Admin dashboard exposes final approvals plus `/admin/users` and `/admin/audit`.
+The login screen includes role cards for each demo account. After verification, the Principal Investigator dashboard focuses on owned projects and new transactions, the Dean dashboard focuses on the approval queue, and the Super Admin dashboard exposes final approvals plus `/admin/users` and `/admin/audit`.
 
 Deans approve or reject pending transactions on their dashboard. Super Admins handle pending final approvals on their dashboard and use the Approvals tab to review or change recorded approvals and rejections. Completed decisions leave the dashboard queue.
 

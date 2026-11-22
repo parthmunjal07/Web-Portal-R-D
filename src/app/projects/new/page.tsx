@@ -132,7 +132,7 @@ export default function NewProject() {
             area
           />
           <Field
-            label="Co-principal inspector names"
+            label="Co-principal investigator names"
             placeholder="Add names separated by commas"
             value={form.coInspectors}
             onChange={(v) => change("coInspectors", v)}

@@ -289,7 +289,7 @@ export default async function ProjectDetail({
             <p className="sub">Funding agency</p>
             <p>{p.funders.length > 0 ? p.funders.join(", ") : "—"}</p>
 
-            <p className="sub">Co-principal inspectors</p>
+            <p className="sub">Co-principal investigators</p>
             <p>
               {p.coInspectors.length > 0 ? p.coInspectors.join(", ") : "—"}
             </p>

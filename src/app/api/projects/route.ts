@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     );
   if (fundingOrganization && !can(role, "addFundingOrganization"))
     return NextResponse.json(
-      { error: "Only Principal Inspectors can add funding organizations." },
+      { error: "Only Principal Investigators can add funding organizations." },
       { status: 403 },
     );
   if (process.env.DEMO_MODE === "true")

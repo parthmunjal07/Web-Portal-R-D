@@ -241,7 +241,7 @@ export default async function Dashboard() {
             ? "Dean of Research & Development"
             : role === "SUPER_ADMIN"
               ? "Super Admin"
-              : "Principal Inspector",
+              : "Principal Investigator",
         focus:
           role === "DEAN"
             ? "Review every transaction awaiting Dean approval"

@@ -125,7 +125,7 @@ export default function Signup() {
           <div className="field">
             <label>Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={loading}>
-              <option value="INSPECTOR">Principal Inspector</option>
+              <option value="INSPECTOR">Principal Investigator</option>
               <option value="DEAN">Dean of Research</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>

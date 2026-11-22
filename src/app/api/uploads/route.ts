@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       : await currentUser();
   if (user?.role !== "INSPECTOR")
     return NextResponse.json(
-      { error: "Only Principal Inspectors can upload invoices." },
+      { error: "Only Principal Investigators can upload invoices." },
       { status: 403 },
     );
 

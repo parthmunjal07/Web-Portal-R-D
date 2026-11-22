@@ -23,7 +23,7 @@ type UserRow = {
 function roleTitle(r: string) {
   switch (r) {
     case "INSPECTOR":
-      return "Principal Inspector";
+      return "Principal Investigator";
     case "DEAN":
       return "Dean of Research & Development";
     case "SUPER_ADMIN":

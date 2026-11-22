@@ -28,7 +28,7 @@ export const demoAccounts = [
     department: "Computer Science",
     institutionId: "RND-PI-001",
     phoneNumber: "+91 98765 43210",
-    title: "Principal Inspector",
+    title: "Principal Investigator",
     focus: "Manage your projects and submit invoice-backed spend",
   },
   {
