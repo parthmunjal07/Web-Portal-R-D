@@ -68,21 +68,25 @@ async function getTxDetail(id: string): Promise<TxDetail> {
     if (!t) notFound();
     return {
       code: t.id,
-      projectName: "AI-Based Crop Disease Detection",
+      projectName: (await demoRecords()).projects.find((p) => p.code === t.project)?.name ?? t.project,
       date: t.date,
       vendor: t.vendor,
-      category: "Equipment",
-      description: "GPU servers for model training and image processing workloads.",
+      category: t.category,
+      description: t.purpose,
       amount: t.amount,
       status: t.status,
       statusLabel: statusLabel(t.status),
       categoryAllocation: 700000,
       alreadyApprovedInCategory: 350000,
-      invoiceFileName: `${t.id.toLowerCase()}.pdf`,
-      invoiceUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-      createdAt: "28 Aug 2026, 10:45 AM",
+      invoiceFileName: t.invoiceName ?? `${t.id.toLowerCase()}.pdf`,
+      invoiceUrl: t.invoicePath?.startsWith("/uploads/") ? t.invoicePath : null,
+      createdAt: t.date,
       createdBy: "Dr. Arvind Kumar (PI)",
-      approvals: [],
+      approvals: t.approvals.map((approval) => ({
+        at: approval.createdAt.toLocaleString("en-IN"),
+        label: `${approval.stage === "DEAN" ? "Dean" : "Super Admin"} ${approval.decision === "APPROVE" ? "approved" : "rejected"}`,
+        by: approval.stage === "DEAN" ? "Prof. Meena Sharma" : "Ravi Menon",
+      })),
       currentStep: currentStep(t.status),
     };
   }
@@ -193,6 +197,7 @@ async function getTxDetail(id: string): Promise<TxDetail> {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 import { InvoiceViewer } from "./invoice-viewer";
+import { PrintReceiptButton } from "./print-receipt-button";
 
 export default async function TransactionDetail({
   params,
@@ -220,7 +225,8 @@ export default async function TransactionDetail({
       : 0;
 
   return (
-    <main className="content">
+    <main className="content transaction-receipt">
+      <div className="no-print"><PrintReceiptButton /></div>
       {/* ── Header ── */}
       <div className="page-header">
         <div>
@@ -241,7 +247,7 @@ export default async function TransactionDetail({
       </div>
 
       {reviewerRole && (
-        <div className="panel" style={{ marginBottom: 24 }}>
+        <div className="panel no-print" style={{ marginBottom: 24 }}>
           <h2>{reviewerRole === "DEAN" ? "Dean review" : "Final review"}</h2>
           <p className="sub" style={{ marginBottom: 16 }}>
             Review the transaction details and invoice, then record your decision.
@@ -302,7 +308,7 @@ export default async function TransactionDetail({
         {/* ── Right column ── */}
         <aside style={{ display: "grid", gap: 24 }}>
           {/* Invoice */}
-          <div className="panel">
+          <div className="panel no-print">
             <h2>Invoice preview</h2>
             <InvoiceViewer
               url={t.invoiceUrl}

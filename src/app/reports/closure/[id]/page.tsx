@@ -8,7 +8,7 @@ import Link from "next/link";
 import { PrintButton } from "./print-button";
 
 // ── Normalised shape ──────────────────────────────────────────────────────────
-type CategoryRow = { name: string; allocated: number; spent: number };
+type CategoryRow = { name: string; allocated: number | null; spent: number };
 type PrintData = {
   id: string;
   code: string;
@@ -34,27 +34,26 @@ async function getPrintData(id: string): Promise<PrintData> {
     const records = await demoRecords();
     const p = records.projects.find((x) => x.id === id);
     if (!p) notFound();
+    const approved = records.transactions.filter((t) => t.project === p.code && t.status === "APPROVED");
+    const spent = approved.reduce((total, t) => total + t.amount, 0);
     return {
       id: p.id,
       code: p.code,
       name: p.name,
       pi: "Dr. Arvind Kumar",
       budget: p.budget,
-      spent: p.spent,
+      spent,
       funders: ["DST-SERB"],
-      categories: [
-        { name: "Equipment", allocated: 700000, spent: 350000 },
-        { name: "Travel", allocated: 300000, spent: 120000 },
-        { name: "Research Personnel", allocated: 500000, spent: 205000 },
-      ],
-      transactions: records.transactions
-        .filter((transaction) => transaction.project === p.code)
+      categories: [...new Set(approved.map((t) => t.category))].map((name) => ({
+        name, allocated: null, spent: approved.filter((t) => t.category === name).reduce((sum, t) => sum + t.amount, 0),
+      })),
+      transactions: approved
         .map((transaction) => ({
           code: transaction.id,
           date: transaction.date,
           vendor: transaction.vendor,
           amount: transaction.amount,
-          category: "Equipment",
+          category: transaction.category,
         })),
     };
   }
@@ -71,7 +70,7 @@ async function getPrintData(id: string): Promise<PrintData> {
             select: { amount: true },
             where: {
               transaction: {
-                status: { in: [PrismaStatus.APPROVED, PrismaStatus.APPROVED_BY_DEAN] },
+                status: { in: [PrismaStatus.APPROVED] },
               },
             },
           },
@@ -79,7 +78,7 @@ async function getPrintData(id: string): Promise<PrintData> {
       },
       transactions: {
         where: {
-          status: { in: [PrismaStatus.APPROVED, PrismaStatus.APPROVED_BY_DEAN] },
+          status: { in: [PrismaStatus.APPROVED] },
         },
         include: {
           lines: { include: { category: { select: { name: true } } } },
@@ -201,9 +200,9 @@ export default async function ClosureDocument({
             {data.categories.map((c, i) => (
               <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                 <td style={{ padding: '12px 4px' }}>{c.name}</td>
-                <td style={{ padding: '12px 4px', textAlign: 'right' }}>{money(c.allocated)}</td>
+                <td style={{ padding: '12px 4px', textAlign: 'right' }}>{c.allocated === null ? "—" : money(c.allocated)}</td>
                 <td style={{ padding: '12px 4px', textAlign: 'right' }}>{money(c.spent)}</td>
-                <td style={{ padding: '12px 4px', textAlign: 'right' }}>{money(c.allocated - c.spent)}</td>
+                <td style={{ padding: '12px 4px', textAlign: 'right' }}>{c.allocated === null ? "—" : money(c.allocated - c.spent)}</td>
               </tr>
             ))}
           </tbody>

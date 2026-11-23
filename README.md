@@ -18,7 +18,7 @@ The login screen includes role cards for each demo account. After verification, 
 
 Deans approve or reject pending transactions on their dashboard. Super Admins handle pending final approvals on their dashboard and use the Approvals tab to review or change recorded approvals and rejections. Completed decisions leave the dashboard queue.
 
-Super Admins can delete users, transactions, and projects from their respective lists. Project deletion also removes its transactions and their invoices. Users must have no owned projects before deletion, and an admin cannot delete their own account. Deletions are recorded in the audit log. With `DEMO_MODE=true`, deletions affect only the current browser's demo cookie; with demo mode off, they delete database records. Apply the updated Prisma schema with `npm run db:push` before using database-backed deletion.
+Super Admins can delete users, transactions, and projects from their respective lists. Project deletion also removes its transactions and their invoices. Users must have no owned projects before deletion, and an admin cannot delete their own account. Deletions are recorded in the audit log. With `DEMO_MODE=true`, demo approvals and transactions are shared through the configured database, while deletions affect only the current browser's demo cookie; with demo mode off, actions affect production records. Apply the updated Prisma schema with `npm run db:push` before using database-backed deletion.
 
 Signup collects department, institution ID, and phone number. Users can update these details on their Profile page, and Super Admins can view them in User accounts. Existing accounts can fill in missing values from Profile after the Prisma schema is applied.
 
@@ -34,6 +34,10 @@ Set `DATABASE_URL` to Neon PostgreSQL, configure Resend or institutional SMTP fo
 4. Copy `.env.example` to `.env`, set `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `S3_BUCKET_NAME`, then restart `npm run dev`.
 
 The server uploads invoices directly to S3 and stores only the private object key in the database. Never expose the secret key in browser code or commit `.env`.
+
+### Shared demo setup
+
+Demo transactions and approval decisions are shared across browsers through PostgreSQL. Use a dedicated disposable demo database, never a production database. Set `DATABASE_URL` and `DEMO_MODE=true`, run `npm run db:push`, and then start the app. The first request seeds sample transactions without overwriting existing decisions. The application requires the `DemoTransaction` and `DemoApproval` tables before this version is deployed with demo mode enabled. Back up the database and apply the schema before deploying; do not expose demo mode as a production authentication system.
 
 ## Verification
 

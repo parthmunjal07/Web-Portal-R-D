@@ -157,3 +157,27 @@ model OtpChallenge {
   usedAt DateTime?
   createdAt DateTime @default(now())
 }
+
+// Shared demo records require a dedicated, non-production database.
+model DemoTransaction {
+  id String @id
+  date String
+  vendor String
+  purpose String
+  project String
+  amount Float
+  status TransactionStatus
+  category String @default("Equipment")
+  invoiceName String?
+  invoicePath String?
+  approvals DemoApproval[]
+}
+
+model DemoApproval {
+  id String @id @default(cuid())
+  transactionId String
+  transaction DemoTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  stage ApprovalStage
+  decision String
+  createdAt DateTime @default(now())
+}
