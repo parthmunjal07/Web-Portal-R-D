@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { Resend } from "resend";
-import { demoRecords } from "@/lib/demo-state";
+import { demoAccountRecords } from "@/lib/demo-state";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   
   // ── Demo path ──────────────────────────────────────────────────────────────
   if (process.env.DEMO_MODE === "true") {
-    if (!(await demoRecords()).accounts.some((account) => account.email === email))
+    if (!(await demoAccountRecords()).some((account) => account.email === email))
       return NextResponse.json({ error: "Demo account not found." }, { status: 401 });
     return NextResponse.json({ ok: true, demo: true });
   }

@@ -92,17 +92,24 @@ export async function demoDeletions(): Promise<DemoDeletions> {
   }
 }
 
+// Account lookup is independent of the database, so demo login remains available
+// even when the shared demo database is temporarily unreachable.
+export async function demoAccountRecords() {
+  const [deleted, profiles] = await Promise.all([demoDeletions(), demoProfiles()]);
+  return demoAccounts
+    .filter((account) => !deleted.users.includes(account.email))
+    .map((account) => ({ ...account, ...profiles[account.email] }));
+}
+
 export async function demoRecords() {
   await seedDemoTransactions();
-  const [deleted, transactions, profiles] = await Promise.all([
-    demoDeletions(), db.demoTransaction.findMany({ include: { approvals: { orderBy: { createdAt: "asc" } } } }), demoProfiles(),
+  const [deleted, transactions, accounts] = await Promise.all([
+    demoDeletions(), db.demoTransaction.findMany({ include: { approvals: { orderBy: { createdAt: "asc" } } } }), demoAccountRecords(),
   ]);
   const projects = demoProjects.filter((p) => !deleted.projects.includes(p.id));
   const projectCodes = new Set(projects.map((p) => p.code));
   return {
-    accounts: demoAccounts
-      .filter((a) => !deleted.users.includes(a.email))
-      .map((account) => ({ ...account, ...profiles[account.email] })),
+    accounts,
     projects,
     transactions: transactions
       .filter(

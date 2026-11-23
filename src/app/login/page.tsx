@@ -1,8 +1,8 @@
 import { LoginForm } from "./login-form";
-import { demoRecords } from "@/lib/demo-state";
+import { demoAccountRecords } from "@/lib/demo-state";
 
 export default async function LoginPage() {
   const isDemoMode = process.env.DEMO_MODE === "true";
-  const accounts = isDemoMode ? (await demoRecords()).accounts : [];
+  const accounts = isDemoMode ? (await demoAccountRecords()) : [];
   return <LoginForm isDemoMode={isDemoMode} demoAccounts={accounts} />;
 }

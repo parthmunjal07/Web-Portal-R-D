@@ -3,14 +3,14 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { createSession } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { demoRecords } from "@/lib/demo-state";
+import { demoAccountRecords } from "@/lib/demo-state";
 
 export async function POST(request: Request) {
   const { email, code, role } = await request.json();
 
   // ── Demo path ──────────────────────────────────────────────────────────────
   if (process.env.DEMO_MODE === "true") {
-    if (!(await demoRecords()).accounts.some((account) => account.email === email && account.role === role))
+    if (!(await demoAccountRecords()).some((account) => account.email === email && account.role === role))
       return NextResponse.json({ error: "Demo account not found." }, { status: 401 });
     const cookieStore = await cookies();
     cookieStore.set("rd_demo", "true", { path: "/" });
