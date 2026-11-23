@@ -1,6 +1,7 @@
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
 import { db } from "./db";
 import { demoRecords } from "./demo-state";
+import type { Transaction } from "./domain";
 
 export type ApprovalRow = {
   code: string;
@@ -14,9 +15,10 @@ export type ApprovalRow = {
 
 export async function getApprovalRows(
   statuses: PrismaStatus[],
+  sharedDemoTransactions?: Transaction[],
 ): Promise<ApprovalRow[]> {
   if (process.env.DEMO_MODE === "true") {
-    return (await demoRecords()).transactions
+    return (sharedDemoTransactions ?? (await demoRecords()).transactions)
       .filter((transaction) =>
         statuses.some((status) => status === transaction.status),
       )

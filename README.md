@@ -37,7 +37,7 @@ The server uploads invoices directly to S3 and stores only the private object ke
 
 ### Shared demo setup
 
-Demo transactions and approval decisions are shared across browsers through PostgreSQL. Use a dedicated disposable demo database, never a production database. Set `DATABASE_URL` and `DEMO_MODE=true`, run `npm run db:push`, and then start the app. The first request seeds sample transactions without overwriting existing decisions. The application requires the `DemoTransaction` and `DemoApproval` tables before this version is deployed with demo mode enabled. Back up the database and apply the schema before deploying; do not expose demo mode as a production authentication system.
+Demo transactions and approval decisions are shared across browsers through PostgreSQL. Use a dedicated disposable demo database, never a production database. Set `DATABASE_URL` and `DEMO_MODE=true`, run `npm run db:push` and `npm run db:seed-demo`, and then start the app. Seeding is an explicit setup step and does not overwrite existing decisions. The application requires the `DemoTransaction` and `DemoApproval` tables before this version is deployed with demo mode enabled. Back up the database and apply the schema before deploying; do not expose demo mode as a production authentication system.
 
 ## Verification
 

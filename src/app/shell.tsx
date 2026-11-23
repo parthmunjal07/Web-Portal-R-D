@@ -14,13 +14,29 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   useEffect(() => {
-    if (!user || pathname === "/login" || pathname === "/signup") return;
-    const refresh = () => { if (document.visibilityState === "visible") router.refresh(); };
-    const timer = window.setInterval(refresh, 15000);
-    document.addEventListener("visibilitychange", refresh);
-    window.addEventListener("focus", refresh);
-    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("focus", refresh); };
-  }, [pathname, router, user]);
+    if (!user || !["/dashboard", "/transactions", "/approvals"].some((p) => pathname === p || pathname.startsWith(p + "/"))) return;
+    let previous: string | undefined;
+    let stopped = false;
+    let pending = false;
+    const check = async () => {
+      if (document.visibilityState !== "visible" || pending) return;
+      pending = true;
+      try {
+        const response = await fetch("/api/approval-version", { cache: "no-store" });
+        if (!response.ok) return;
+        const { version } = await response.json();
+        if (stopped || typeof version !== "string") return;
+        if (previous !== undefined && previous !== version) router.refresh();
+        previous = version;
+      } catch { /* Retry on the next interval without interrupting the page. */ }
+      finally { pending = false; }
+    };
+    void check();
+    const timer = window.setInterval(check, 15000);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => { stopped = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", check); window.removeEventListener("focus", check); };
+  }, [pathname, router, user?.role]);
 
   if (pathname === "/login" || pathname === "/signup") {
     return <>{children}</>;

@@ -3,7 +3,6 @@ import { db } from "./db";
 import {
   demoAccounts,
   demoProjects,
-  demoTransactions,
   type TransactionStatus,
 } from "./domain";
 import { profileFieldsSchema, type ProfileFields } from "./profile-fields";
@@ -12,18 +11,6 @@ export type DemoEntity = "users" | "projects" | "transactions";
 type DemoDeletions = Record<DemoEntity, string[]>;
 const cookieName = "rd_demo_deleted";
 const profileCookieName = "rd_demo_profiles";
-
-// All roles use the same dedicated demo database. Seed entries without overwriting
-// decisions already made by another user.
-async function seedDemoTransactions() {
-  await Promise.all(demoTransactions.map((transaction) =>
-    db.demoTransaction.upsert({
-      where: { id: transaction.id },
-      create: transaction,
-      update: {},
-    }),
-  ));
-}
 
 export async function setDemoApprovalStatus(code: string, status: TransactionStatus, expected: TransactionStatus, stage: "DEAN" | "SUPER_ADMIN", decision: "APPROVE" | "REJECT") {
   return db.$transaction(async (tx) => {
@@ -102,7 +89,6 @@ export async function demoAccountRecords() {
 }
 
 export async function demoRecords() {
-  await seedDemoTransactions();
   const [deleted, transactions, accounts] = await Promise.all([
     demoDeletions(), db.demoTransaction.findMany({ include: { approvals: { orderBy: { createdAt: "asc" } } } }), demoAccountRecords(),
   ]);
