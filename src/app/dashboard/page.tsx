@@ -77,8 +77,7 @@ function txStatusLabel(s: string): string {
 }
 
 // ── Demo data in the normalised shape ─────────────────────────────────────────
-async function getDemoData(): Promise<DashboardData> {
-  const { projects, transactions } = await demoRecords();
+async function getDemoData({ projects, transactions }: Awaited<ReturnType<typeof demoRecords>>): Promise<DashboardData> {
   const totalSanctioned = projects.reduce((sum, project) => sum + project.budget, 0);
   const approvedSpend = transactions
     .filter((transaction) => transaction.status === "APPROVED" || transaction.status === "APPROVED_BY_DEAN")
@@ -250,12 +249,13 @@ export default async function Dashboard() {
               : "Manage your projects and submit invoice-backed spend",
       };
 
+  const sharedDemo = isDemo ? await demoRecords() : null;
   const [data, approvalRows] = await Promise.all([
-    isDemo ? getDemoData() : getDbData(role, sessionUser?.id ?? null),
+    sharedDemo ? getDemoData(sharedDemo) : getDbData(role, sessionUser?.id ?? null),
     role === "DEAN"
-      ? getApprovalRows([PrismaStatus.PENDING_DEAN])
+      ? getApprovalRows([PrismaStatus.PENDING_DEAN], sharedDemo?.transactions)
       : role === "SUPER_ADMIN"
-        ? getApprovalRows([PrismaStatus.APPROVED_BY_DEAN])
+        ? getApprovalRows([PrismaStatus.APPROVED_BY_DEAN], sharedDemo?.transactions)
         : Promise.resolve([]),
   ]);
 
