@@ -39,6 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.DEMO_MODE = "true";
   mocks.role = "DEAN";
+  mocks.setDemoApprovalStatus.mockResolvedValue(true);
   mocks.demoRecords.mockResolvedValue({
     transactions: [
       {
@@ -103,8 +104,16 @@ describe("dashboard approval queues", () => {
     expect(mocks.setDemoApprovalStatus).toHaveBeenCalledWith(
       "TX-PENDING",
       "APPROVED_BY_DEAN",
+      "PENDING_DEAN",
+      "DEAN",
+      "APPROVE",
     );
     expect((await POST(request("TX-APPROVED", "REJECT"))).status).toBe(409);
+  });
+
+  it("rejects a decision when another reviewer changed the transaction", async () => {
+    mocks.setDemoApprovalStatus.mockResolvedValue(false);
+    expect((await POST(request("TX-PENDING", "APPROVE"))).status).toBe(409);
   });
 
   it("lets Super Admin finalize and change recorded decisions", async () => {
@@ -113,11 +122,17 @@ describe("dashboard approval queues", () => {
     expect(mocks.setDemoApprovalStatus).toHaveBeenCalledWith(
       "TX-FINAL",
       "REJECTED",
+      "APPROVED_BY_DEAN",
+      "SUPER_ADMIN",
+      "REJECT",
     );
     expect((await POST(request("TX-REJECTED", "APPROVE"))).status).toBe(200);
     expect(mocks.setDemoApprovalStatus).toHaveBeenCalledWith(
       "TX-REJECTED",
       "APPROVED",
+      "REJECTED",
+      "SUPER_ADMIN",
+      "APPROVE",
     );
     expect((await POST(request("TX-PENDING", "APPROVE"))).status).toBe(409);
   });

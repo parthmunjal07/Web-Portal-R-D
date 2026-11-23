@@ -51,7 +51,8 @@ export async function POST(request: Request) {
     const nextStatus = nextApprovalStatus(role, transaction.status, decision);
     if (!nextStatus)
       return NextResponse.json({ error: invalidStatusMessage }, { status: 409 });
-    await setDemoApprovalStatus(transactionCode, nextStatus);
+    if (!(await setDemoApprovalStatus(transactionCode, nextStatus, transaction.status, role as "DEAN" | "SUPER_ADMIN", decision)))
+      return NextResponse.json({ error: "Transaction changed; refresh and try again." }, { status: 409 });
     return NextResponse.json({ ok: true, status: nextStatus, demo: true });
   }
 

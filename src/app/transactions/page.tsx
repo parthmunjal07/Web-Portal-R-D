@@ -21,11 +21,11 @@ type TxRow = {
 // ── Map raw DB status → display label understood by <Status> ─────────────────
 function statusLabel(s: string): string {
   switch (s) {
-    case "APPROVED":        return "Cleared";
+    case "APPROVED":        return "Approved";
     case "REJECTED":        return "Rejected";
-    case "APPROVED_BY_DEAN": return "Pending Final";
+    case "APPROVED_BY_DEAN": return "Dean Approved — Pending Final Approval";
     case "DRAFT":           return "Draft";
-    default:                return "Pending Approval"; // PENDING_DEAN
+    default:                return "Pending Dean Approval"; // PENDING_DEAN
   }
 }
 
@@ -40,7 +40,7 @@ async function getTransactions(): Promise<TxRow[]> {
       purpose: t.purpose,
       project: t.project,
       amount: t.amount,
-      statusLabel: t.status === "APPROVED" ? "Cleared" : "Pending Approval",
+      statusLabel: statusLabel(t.status),
     }));
   }
 

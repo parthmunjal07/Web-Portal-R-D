@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { db } from "./db";
 import {
   demoAccounts,
   demoProjects,
@@ -10,47 +11,36 @@ import { profileFieldsSchema, type ProfileFields } from "./profile-fields";
 export type DemoEntity = "users" | "projects" | "transactions";
 type DemoDeletions = Record<DemoEntity, string[]>;
 const cookieName = "rd_demo_deleted";
-const approvalCookieName = "rd_demo_approvals";
 const profileCookieName = "rd_demo_profiles";
-const validStatuses = new Set<TransactionStatus>([
-  "PENDING_DEAN",
-  "APPROVED_BY_DEAN",
-  "APPROVED",
-  "REJECTED",
-]);
 
-export async function demoApprovalStatuses(): Promise<
-  Record<string, TransactionStatus>
-> {
-  const raw = (await cookies()).get(approvalCookieName)?.value;
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-      return {};
-    return Object.fromEntries(
-      Object.entries(parsed).filter(
-        (entry): entry is [string, TransactionStatus] =>
-          typeof entry[1] === "string" &&
-          validStatuses.has(entry[1] as TransactionStatus),
-      ),
-    );
-  } catch {
-    return {};
-  }
+// All roles use the same dedicated demo database. Seed entries without overwriting
+// decisions already made by another user.
+async function seedDemoTransactions() {
+  await Promise.all(demoTransactions.map((transaction) =>
+    db.demoTransaction.upsert({
+      where: { id: transaction.id },
+      create: transaction,
+      update: {},
+    }),
+  ));
 }
 
-export async function setDemoApprovalStatus(
-  code: string,
-  status: TransactionStatus,
-) {
-  const statuses = await demoApprovalStatuses();
-  statuses[code] = status;
-  (await cookies()).set(approvalCookieName, JSON.stringify(statuses), {
-    path: "/",
-    sameSite: "lax",
-    httpOnly: true,
+export async function setDemoApprovalStatus(code: string, status: TransactionStatus, expected: TransactionStatus, stage: "DEAN" | "SUPER_ADMIN", decision: "APPROVE" | "REJECT") {
+  return db.$transaction(async (tx) => {
+    const result = await tx.demoTransaction.updateMany({ where: { id: code, status: expected }, data: { status } });
+    if (result.count !== 1) return false;
+    await tx.demoApproval.create({ data: { transactionId: code, stage, decision } });
+    return true;
   });
+}
+
+export async function createDemoTransaction(data: {
+  project: string; date: string; vendor: string; purpose: string;
+  amount: number; category: string; invoiceName?: string; invoicePath: string;
+}) {
+  return db.demoTransaction.create({ data: {
+    id: `TXN-${crypto.randomUUID()}`, ...data, status: "PENDING_DEAN",
+  } });
 }
 
 async function demoProfiles(): Promise<Record<string, ProfileFields>> {
@@ -103,10 +93,9 @@ export async function demoDeletions(): Promise<DemoDeletions> {
 }
 
 export async function demoRecords() {
-  const [deleted, statuses, profiles] = await Promise.all([
-    demoDeletions(),
-    demoApprovalStatuses(),
-    demoProfiles(),
+  await seedDemoTransactions();
+  const [deleted, transactions, profiles] = await Promise.all([
+    demoDeletions(), db.demoTransaction.findMany({ include: { approvals: { orderBy: { createdAt: "asc" } } } }), demoProfiles(),
   ]);
   const projects = demoProjects.filter((p) => !deleted.projects.includes(p.id));
   const projectCodes = new Set(projects.map((p) => p.code));
@@ -115,12 +104,11 @@ export async function demoRecords() {
       .filter((a) => !deleted.users.includes(a.email))
       .map((account) => ({ ...account, ...profiles[account.email] })),
     projects,
-    transactions: demoTransactions
+    transactions: transactions
       .filter(
         (t) =>
           !deleted.transactions.includes(t.id) && projectCodes.has(t.project),
-      )
-      .map((t) => ({ ...t, status: statuses[t.id] ?? t.status })),
+      ),
   };
 }
 

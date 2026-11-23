@@ -3,6 +3,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { TransactionStatus as PrismaStatus } from "@prisma/client";
 import { currentUser, hasRole } from "@/lib/auth";
+import { demoRecords, createDemoTransaction } from "@/lib/demo-state";
+import { cookies } from "next/headers";
+import { parseRole } from "@/lib/permissions";
 
 const transactionSchema = z.object({
   projectId: z.string().min(1),
@@ -24,7 +27,7 @@ export async function POST(request: Request) {
     );
   const user =
     process.env.DEMO_MODE === "true"
-      ? { role: "INSPECTOR", id: "demo-user" }
+      ? { role: parseRole((await cookies()).get("rd_demo_role")?.value), id: "demo-user" }
       : await currentUser();
   if (!hasRole(user, ["INSPECTOR"])) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
@@ -39,15 +42,17 @@ export async function POST(request: Request) {
     invoicePath,
     invoiceName,
   } = parsed.data;
-  if (process.env.DEMO_MODE === "true")
-    return NextResponse.json(
-      {
-        ok: true,
-        code: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-        demo: true,
-      },
-      { status: 201 },
-    );
+  if (process.env.DEMO_MODE === "true") {
+    const project = (await demoRecords()).projects.find((p) => p.id === projectId);
+    if (!project || !["equipment", "travel"].includes(categoryId))
+      return NextResponse.json({ error: "Invalid project or category." }, { status: 400 });
+    const transaction = await createDemoTransaction({
+      project: project.code, date: date.toISOString().slice(0, 10), vendor,
+      purpose: description, amount, category: categoryId === "travel" ? "Travel" : "Equipment",
+      invoicePath, invoiceName,
+    });
+    return NextResponse.json({ ok: true, code: transaction.id, demo: true }, { status: 201 });
+  }
   const category = await db.budgetCategory.findFirst({
     where: { id: categoryId, project: { ownerId: user!.id } },
   });

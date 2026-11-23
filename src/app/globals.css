@@ -1126,3 +1126,19 @@ textarea:focus-visible {
     width: 100%;
   }
 }
+
+.history-preview { position: fixed; inset: 0; z-index: 999; overflow: auto; background: white; padding: 24px; color: #111; }
+.history-toolbar { display: flex; gap: 12px; margin-bottom: 24px; align-items: center; }
+.history-document table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.history-document th, .history-document td { text-align: left; border: 1px solid #777; padding: 6px; overflow-wrap: anywhere; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  .no-print, .sidebar, .topbar, nav, .history-toolbar { display: none !important; }
+  .shell, .main { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  .history-preview { position: static; padding: 0; overflow: visible; }
+  body:has(.history-preview) .shell > .main > :not(main), body:has(.history-preview) main > :not(.report-grid), body:has(.history-preview) .report-grid > :not(:first-child), body:has(.history-preview) .report-card > :not(:has(.history-preview)) { display: none !important; }
+  body:has(.history-preview) .report-card, body:has(.history-preview) .report-grid, body:has(.history-preview) .content { display: block; border: 0; padding: 0; margin: 0; box-shadow: none; }
+  .history-document thead { display: table-header-group; }
+  .history-document tr { break-inside: avoid; }
+  .transaction-receipt { padding: 0 !important; }
+}

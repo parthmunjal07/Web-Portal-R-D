@@ -66,13 +66,13 @@ function deriveProjectStatus(endDate: Date, budget: number, spent: number) {
 function txStatusLabel(s: string): string {
   switch (s) {
     case "APPROVED":
-      return "Cleared";
+      return "Approved";
     case "REJECTED":
       return "Rejected";
     case "APPROVED_BY_DEAN":
-      return "Pending Final";
+      return "Dean Approved — Pending Final Approval";
     default:
-      return "Pending Approval"; // DRAFT + PENDING_DEAN
+      return "Pending Dean Approval"; // DRAFT + PENDING_DEAN
   }
 }
 
@@ -486,13 +486,7 @@ export default async function Dashboard() {
                     <td>{money(t.amount)}</td>
                     <td>
                       <Status
-                        status={
-                          isDemo
-                            ? t.status === "APPROVED"
-                              ? "Cleared"
-                              : "Pending Approval"
-                            : txStatusLabel(t.status)
-                        }
+                        status={txStatusLabel(t.status)}
                       />
                     </td>
                   </ClickableTableRow>

@@ -6,17 +6,15 @@ import { NewTransactionForm, type FormProject } from "./transaction-form";
 // ── Data source ───────────────────────────────────────────────────────────────
 async function getProjectsForForm(): Promise<FormProject[]> {
   if (process.env.DEMO_MODE === "true") {
-    return [
-      {
-        id: "demo-project",
-        name: "AI-Based Crop Disease Detection",
-        code: "RND-2026-014",
-        categories: [
-          { id: "equipment", name: "Equipment", remaining: 350000 },
-          { id: "travel", name: "Travel", remaining: 180000 },
-        ],
-      },
-    ];
+    const { demoRecords } = await import("@/lib/demo-state");
+    const { projects } = await demoRecords();
+    return projects.map((p) => ({
+      id: p.id, name: p.name, code: p.code,
+      categories: [
+        { id: "equipment", name: "Equipment", remaining: p.budget },
+        { id: "travel", name: "Travel", remaining: p.budget },
+      ],
+    }));
   }
 
   const user = await currentUser();

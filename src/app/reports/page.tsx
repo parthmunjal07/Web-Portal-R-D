@@ -29,14 +29,14 @@ type ReadinessRow = {
 async function getReadiness(): Promise<ReadinessRow[]> {
   // Demo: original data, all show "Ready"
   if (process.env.DEMO_MODE === "true") {
-    return (await demoRecords()).projects.map((p) => ({
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      approvedSpend: p.spent,
-      state: "ready",
-      pendingCount: 0,
-    }));
+    const { projects, transactions } = await demoRecords();
+    return projects.map((p) => {
+      const projectTransactions = transactions.filter((t) => t.project === p.code);
+      const pendingCount = projectTransactions.filter((t) => t.status === "PENDING_DEAN" || t.status === "APPROVED_BY_DEAN").length;
+      const approvedSpend = projectTransactions.filter((t) => t.status === "APPROVED").reduce((sum, t) => sum + t.amount, 0);
+      return { id: p.id, code: p.code, name: p.name, approvedSpend, pendingCount,
+        state: (projectTransactions.length === 0 ? "no-activity" : pendingCount ? "pending" : "ready") as ReadinessState };
+    });
   }
 
   // Real DB: all projects with their transaction statuses + approved spend
@@ -57,7 +57,7 @@ async function getReadiness(): Promise<ReadinessRow[]> {
       (t) => t.status === "PENDING_DEAN" || t.status === "APPROVED_BY_DEAN",
     );
     const approvedSpend = p.transactions
-      .filter((t) => t.status === "APPROVED" || t.status === "APPROVED_BY_DEAN")
+      .filter((t) => t.status === "APPROVED")
       .flatMap((t) => t.lines)
       .reduce((sum, l) => sum + Number(l.amount), 0);
 

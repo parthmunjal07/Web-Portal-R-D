@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import type { TxCsvRow } from "@/app/api/reports/transactions/route";
 
@@ -50,6 +50,13 @@ function downloadBlob(content: string, filename: string) {
 export function ExportActions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rows, setRows] = useState<TxCsvRow[] | null>(null);
+
+  useEffect(() => {
+    if (!rows) return;
+    const timer = window.setTimeout(() => window.print(), 150);
+    return () => window.clearTimeout(timer);
+  }, [rows]);
 
   async function exportCsv() {
     setLoading(true);
@@ -66,8 +73,28 @@ export function ExportActions() {
     }
   }
 
+  async function printHistory() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/reports/transactions", { cache: "no-store" });
+      if (!response.ok) throw new Error("Failed to fetch transaction history.");
+      setRows(await response.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Print failed.");
+    } finally { setLoading(false); }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {rows && <div className="history-preview">
+        <div className="history-toolbar no-print"><strong>Transaction history preview</strong> <button onClick={() => window.print()}>Print / save PDF</button> <button onClick={() => setRows(null)}>Close</button></div>
+        <div className="history-document"><h1>Transaction History</h1><p>Generated {new Date().toLocaleDateString("en-IN")}</p>
+          <table><thead><tr>{HEADERS.map((key) => <th key={key}>{HEADER_LABELS[key]}</th>)}</tr></thead>
+          <tbody>{rows.map((row, i) => <tr key={`${row.id}-${i}`}>{HEADERS.map((key) => <td key={key}>{row[key]}</td>)}</tr>)}</tbody></table>
+          {rows.length === 0 && <p>No transactions found.</p>}
+        </div>
+      </div>}
       {error && (
         <span style={{ fontSize: 12, color: "#b71329" }}>{error}</span>
       )}
@@ -80,7 +107,7 @@ export function ExportActions() {
           )}{" "}
           {loading ? "Exporting…" : "Export Excel-compatible CSV"}
         </button>
-        <button className="secondary" onClick={() => window.print()}>
+        <button className="secondary" onClick={printHistory} disabled={loading}>
           <FileText size={16} /> Print / save PDF
         </button>
       </div>
